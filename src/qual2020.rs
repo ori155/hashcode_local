@@ -1,5 +1,6 @@
 use thiserror::Error;
 use itertools::Itertools;
+use std::cmp::min;
 
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -23,22 +24,30 @@ pub enum ScoringError {
         library_id: LibraryID
     },
     #[error("There is a different number of libraries than specified")]
-    WrongNumberOfLibrariesToSignUp
+    WrongNumberOfLibrariesToSignUp,
+    #[error("Missing parameter on input file")]
+    MissingParameterOnInputFile,
+    #[error("You're trying to register more libraries than exist in this case")]
+    TooManyLibraries,
+    #[error("You're trying to scan a book that doesn't exist in the library")]
+    LibraryDoesntContainBook,
+    #[error("You're trying to sign up a library that doesn't exist")]
+    NonExistLibrary
+
 }
 
 
-pub enum Case {
-    Example,
-    A,
-    B,
-    C,
-    D,
-    E,
-    F
-}
 
 type LibraryID = u32;
 type BookID = u32;
+type BookScore = u16;
+
+struct Library {
+    id: LibraryID,
+    books: Vec<BookID>,
+    max_books_per_day: u32,
+    days_to_signup: u32
+}
 
 struct LibrarySignup {
     id: LibraryID,
@@ -77,13 +86,87 @@ struct Submission {
     libraries_to_signup: Vec<LibrarySignup>
 }
 
+pub struct Case {
+    number_of_different_books: u32,
+    libraries: Vec<Library>,
+    number_of_days: u32,
+    score_per_book: Vec<BookScore>
+}
 
-pub fn score(submission: &str, case: Case) -> Result<usize, ScoringError> {
+impl Case {
+    fn parse(input: &str) -> Result<Self, ScoringError> {
+        let mut lines = input.lines();
+
+        let mut first_line = lines.next().ok_or(ScoringError::MissingLine)?.split_whitespace();
+        let number_of_different_books = first_line.next()
+            .ok_or(ScoringError::MissingParameterOnInputFile)?
+            .parse()
+            .map_err(|_| ScoringError::ExpectedANumber)?;
+
+
+        let number_of_libraries = first_line.next()
+            .ok_or(ScoringError::MissingParameterOnInputFile)?
+            .parse::<u32>()
+            .map_err(|_| ScoringError::ExpectedANumber)?;
+
+        let number_of_days = first_line.next()
+            .ok_or(ScoringError::MissingParameterOnInputFile)?
+            .parse::<u32>()
+            .map_err(|_| ScoringError::ExpectedANumber)?;
+
+
+        let score_per_book = lines.next().ok_or(ScoringError::MissingLine)?.split_whitespace()
+            .map(|x| x.parse::<BookScore>())
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| ScoringError::ExpectedANumber)?;
+
+
+        let mut libraries = Vec::with_capacity(number_of_libraries as usize);
+        for library_id in 0..number_of_libraries {
+            let mut first_line = lines.next().ok_or(ScoringError::MissingLine)?.split_whitespace();
+            let number_of_books = first_line.next()
+                .ok_or(ScoringError::MissingParameterOnInputFile)?
+                .parse::<u32>()
+                .map_err(|_| ScoringError::ExpectedANumber)?;
+
+            let days_to_signup = first_line.next()
+                .ok_or(ScoringError::MissingParameterOnInputFile)?
+                .parse()
+                .map_err(|_| ScoringError::ExpectedANumber)?;
+
+            let max_books_per_day = first_line.next()
+                .ok_or(ScoringError::MissingParameterOnInputFile)?
+                .parse()
+                .map_err(|_| ScoringError::ExpectedANumber)?;
+
+
+            let books_in_library = lines.next().ok_or(ScoringError::MissingLine)?.split_whitespace()
+                .map(|x| x.parse::<BookID>())
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|_| ScoringError::ExpectedANumber)?;
+
+            libraries.push(Library{ id: library_id, days_to_signup, max_books_per_day, books: books_in_library })
+
+        }
+
+        Ok(Case { number_of_different_books, libraries, number_of_days, score_per_book })
+
+    }
+}
+
+lazy_static!{
+    pub static ref CASE_A: Case = Case::parse(include_str!("../assets/2020qual/inputs/a_example.txt")).
+                                        unwrap();
+}
+
+pub fn score(submission: &str, case: &Case) -> Result<u64, ScoringError> {
     let mut input_lines = submission.lines();
     let number_of_libraries_to_signup: u32 = input_lines.next().ok_or(ScoringError::MissingLine)?
         .parse().map_err(|_| ScoringError::ExpectedANumber)?;
 
-    //TODO add check that 0 <= A <= L
+    if number_of_libraries_to_signup as usize > case.libraries.len() {
+        return Err(ScoringError::TooManyLibraries)
+    }
 
     let mut libraries_to_signup = Vec::with_capacity(number_of_libraries_to_signup as usize);
     for mut double_line in &input_lines.chunks(2) {
@@ -100,10 +183,32 @@ pub fn score(submission: &str, case: Case) -> Result<usize, ScoringError> {
 
     let submission = Submission { libraries_to_signup };
 
-    //TODO add checks for submission (e.g. the needed books are in the library)
+    for library_signup in &submission.libraries_to_signup {
+        let lib_id = library_signup.id;
+        let library: &Library = case.libraries.get(lib_id as usize).ok_or(ScoringError::NonExistLibrary)?;
 
-    unimplemented!()
+        if library_signup.books_to_scan.iter().any(|book| !library.books.contains(book)) {
+            return Err(ScoringError::LibraryDoesntContainBook)
+        }
+    }
 
+    let mut score: u64 = 0;
+    let mut days_left = case.number_of_days;
+    for curr_signup in &submission.libraries_to_signup {
+        // wait the sign up time
+        let library = &case.libraries[curr_signup.id as usize];
+        let days_to_signup = library.days_to_signup;
+        if days_left <= days_to_signup { break };
+        days_left -= days_to_signup;
+
+        let number_of_books_able_to_scan = min(days_left/library.max_books_per_day,
+                                               curr_signup.books_to_scan.len() as u32);
+        score += curr_signup.books_to_scan.iter().take(number_of_books_able_to_scan as usize)
+            .map(|&bid| case.score_per_book[bid as usize])
+            .sum::<BookScore>() as u64;
+    }
+
+    Ok(score)
 }
 
 #[cfg(test)]
