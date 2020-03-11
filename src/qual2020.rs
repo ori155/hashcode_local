@@ -158,9 +158,31 @@ impl Case {
 lazy_static!{
     pub static ref CASE_A: Case = Case::parse(include_str!("../assets/2020qual/inputs/a_example.txt")).
                                         unwrap();
+    pub static ref CASE_B: Case = Case::parse(include_str!("../assets/2020qual/inputs/b_read_on.txt")).
+                                        unwrap();
+    pub static ref CASE_C: Case = Case::parse(include_str!("../assets/2020qual/inputs/c_incunabula.txt")).
+                                        unwrap();
+    pub static ref CASE_D: Case = Case::parse(include_str!("../assets/2020qual/inputs/d_tough_choices.txt")).
+                                        unwrap();
+    pub static ref CASE_E: Case = Case::parse(include_str!("../assets/2020qual/inputs/e_so_many_books.txt")).
+                                        unwrap();
+    pub static ref CASE_F: Case = Case::parse(include_str!("../assets/2020qual/inputs/f_libraries_of_the_world.txt")).
+                                        unwrap();
 }
 
-pub fn score(submission: &str, case: &Case) -> Result<u64, ScoringError> {
+pub enum InputCase {
+    A, B, C, D, E, F
+}
+
+pub fn score(submission: &str, case: InputCase) -> Result<u64, ScoringError> {
+    let case: &Case = match case {
+        InputCase::A => &*CASE_A,
+        InputCase::B => &*CASE_B,
+        InputCase::C => &*CASE_C,
+        InputCase::D => &*CASE_D,
+        InputCase::E => &*CASE_E,
+        InputCase::F => &*CASE_F,
+    };
     let mut input_lines = submission.lines();
     let number_of_libraries_to_signup: u32 = input_lines.next().ok_or(ScoringError::MissingLine)?
         .parse().map_err(|_| ScoringError::ExpectedANumber)?;
