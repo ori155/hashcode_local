@@ -1,6 +1,7 @@
 use thiserror::Error;
 use itertools::Itertools;
 use std::cmp::min;
+use std::collections::HashSet;
 
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -124,7 +125,7 @@ impl Case {
         let mut libraries = Vec::with_capacity(number_of_libraries as usize);
         for library_id in 0..number_of_libraries {
             let mut first_line = lines.next().ok_or(ScoringError::MissingLine)?.split_whitespace();
-            let number_of_books = first_line.next()
+            let _number_of_books = first_line.next()
                 .ok_or(ScoringError::MissingParameterOnInputFile)?
                 .parse::<u32>()
                 .map_err(|_| ScoringError::ExpectedANumber)?;
@@ -192,7 +193,7 @@ pub fn score(submission: &str, case: &Case) -> Result<u64, ScoringError> {
         }
     }
 
-    let mut score: u64 = 0;
+    let mut books_scaned: HashSet<BookID, _> = HashSet::new();
     let mut days_left = case.number_of_days;
     for curr_signup in &submission.libraries_to_signup {
         // wait the sign up time
@@ -201,13 +202,14 @@ pub fn score(submission: &str, case: &Case) -> Result<u64, ScoringError> {
         if days_left <= days_to_signup { break };
         days_left -= days_to_signup;
 
-        let number_of_books_able_to_scan = min(days_left/library.max_books_per_day,
+        let number_of_books_able_to_scan = min(days_left*library.max_books_per_day,
                                                curr_signup.books_to_scan.len() as u32);
-        score += curr_signup.books_to_scan.iter().take(number_of_books_able_to_scan as usize)
-            .map(|&bid| case.score_per_book[bid as usize])
-            .sum::<BookScore>() as u64;
+        books_scaned.extend(curr_signup.books_to_scan.iter().take(number_of_books_able_to_scan as usize));
     }
 
+    let score = books_scaned.iter()
+        .map(|&book_id| case.score_per_book[book_id as usize] as u64)
+        .sum();
     Ok(score)
 }
 
