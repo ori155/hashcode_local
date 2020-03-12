@@ -1,20 +1,50 @@
 use warp::Filter;
-use std::collections::{HashMap, HashSet};
-use serde_derive::{Deserialize, Serialize};
-use tokio::sync::{RwLock, Mutex};
-use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Team {
-    name: String,
-    participants: Vec<String>
-}
+pub mod team;
+pub use team::Team;
 
 #[derive(Debug)]
 struct ExistingTeam;
 impl warp::reject::Reject for ExistingTeam {}
 
-type TeamsDb = Arc<RwLock<HashSet<String>>>;
+pub mod teams_db {
+    use tokio::sync::RwLock;
+    use std::sync::Arc;
+    use std::collections::HashMap;
+
+    use crate::team::Team;
+
+    #[derive(Clone)]
+    pub struct TeamsDb {
+        inner: Arc<RwLock<HashMap<String, Team>>>
+    }
+
+    impl TeamsDb {
+        pub fn new() -> Self {
+            Self{inner: Arc::new(RwLock::new(HashMap::<String, Team>::new()))}
+        }
+
+        pub async fn contains(&self, team: &Team) -> bool {
+            self.inner.read().await
+                .contains_key(&team.name)
+        }
+
+        pub async fn insert(&mut self, team: Team) {
+            let key = team.name.clone();
+            self.inner.write().await
+                .insert(key, team);
+        }
+
+        //TODO change to iterator
+        pub async fn list_team_names(&self) -> Vec<String> {
+            self.inner.read().await
+                .keys().map(|s| s.to_owned()).collect()
+        }
+    }
+
+}
+
+use teams_db::TeamsDb;
 
 fn with_db(db: TeamsDb) -> impl Filter<Extract = (TeamsDb,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
@@ -22,23 +52,19 @@ fn with_db(db: TeamsDb) -> impl Filter<Extract = (TeamsDb,), Error = std::conver
 
 mod handlers {
     use super::{Team, TeamsDb};
-    pub async fn add_team(new_team: Team, teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let mut w_teams = teams_db.write().await;
+    pub async fn add_team(new_team: Team, mut teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
 
-        if w_teams.contains(&new_team.name) {
+        if teams_db.contains(&new_team).await {
             return Ok("Err: Team Exists")
         }
 
-        w_teams.insert(new_team.name);
+        teams_db.insert(new_team).await;
 
         Ok("New team added")
     }
 
     pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let listed_teams: Vec<String> = {
-            let r_teams = teams_db.read().await;
-            r_teams.iter().map(|s| s.clone()).collect()
-        };
+        let listed_teams: Vec<String> = teams_db.list_team_names().await;
 
         Ok(format!("Teams: {:?}", listed_teams))
     }
@@ -47,9 +73,7 @@ mod handlers {
 #[tokio::main]
 async fn main() {
 
-    let teams = Arc::new(RwLock::new(HashSet::<String, _>::new()));
-
-
+    let teams = TeamsDb::new();
 
     let team_registration = warp::post()
         .and(warp::body::json())
@@ -58,6 +82,7 @@ async fn main() {
 
     let list_teams = warp::get()
         .and(warp::path("teams"))
+        .and(warp::path::end())
         .and(with_db(teams.clone()))
         .and_then(handlers::list_teams);
 
