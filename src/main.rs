@@ -1,11 +1,26 @@
 use warp::Filter;
 
+use serde_derive::{Serialize, Deserialize};
+use hex_string::HexString;
+use hmac::Mac;
+
 pub mod team;
 pub use team::Team;
 
-#[derive(Debug)]
-struct ExistingTeam;
-impl warp::reject::Reject for ExistingTeam {}
+#[derive(Debug, Serialize, Deserialize)]
+struct ErrorTeamExists;
+impl warp::reject::Reject for ErrorTeamExists {}
+
+
+#[derive(Debug, Serialize)]
+pub struct TeamToken {
+    #[serde(serialize_with = "crate::serialize_hex_string")]
+    pub token: HexString
+}
+
+fn serialize_hex_string<S>(token: &HexString, s: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    s.serialize_bytes(&token.as_bytes())
+}
 
 pub mod teams_db {
     use tokio::sync::RwLock;
@@ -46,21 +61,24 @@ pub mod teams_db {
 
 use teams_db::TeamsDb;
 use crate::filters::team_registration;
+use crate::team::TeamName;
 
 
 mod handlers {
     use super::{Team, TeamsDb};
     use crate::team::TeamName;
+    use crate::{sign_on_team_name, ErrorTeamExists};
 
     pub async fn add_team(new_team: Team, mut teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
 
         if teams_db.contains(&new_team.name).await {
-            return Ok("Err: Team Exists")
+            return Ok(warp::reply::json(&ErrorTeamExists))
         }
 
+        let new_team_token = sign_on_team_name(&new_team.name);
         teams_db.insert(new_team).await;
 
-        Ok("New team added")
+        Ok(warp::reply::json(&new_team_token))
     }
 
     pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
@@ -70,9 +88,20 @@ mod handlers {
     }
 }
 
+fn sign_on_team_name(team_name: &TeamName) -> TeamToken {
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(b"This is my secret key")
+        .expect("Hmac init should never be a problem");
+
+    mac.input(team_name.as_str().as_bytes());
+
+    TeamToken { token: HexString::from_bytes(mac.result().code().as_slice()) }
+}
+
 mod filters {
     use crate::teams_db::TeamsDb;
     use warp::Filter;
+    use crate::team::TeamName;
+    use hex_string::HexString;
 
     fn with_db(db: TeamsDb) -> impl Filter<Extract = (TeamsDb,), Error = std::convert::Infallible> + Clone {
         warp::any().map(move || db.clone())
@@ -96,10 +125,21 @@ mod filters {
             .and_then(crate::handlers::list_teams)
     }
 
+    pub fn team_access(teams: TeamsDb) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
+    {
+        warp::get()
+            .and(warp::path!("team" / TeamName / HexString))
+            .map(|team_name: TeamName, team_token: HexString| {
+
+                Ok(format!("{}: {}", team_name, team_token.as_str()))
+            })
+    }
+
     pub fn game_api(teams: TeamsDb) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
     {
         team_registration(teams.clone())
             .or(list_teams(teams.clone()))
+            .or(team_access(teams.clone()))
     }
 }
 
@@ -148,5 +188,7 @@ mod tests {
 
         assert!(teams_db.contains(&new_team.name).await);
     }
+
+
 
 }

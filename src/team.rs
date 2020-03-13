@@ -45,6 +45,12 @@ mod team_name {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct TeamName(String);
 
+    impl TeamName {
+        pub fn as_str(&self) -> &str {
+            self.0.as_str()
+        }
+    }
+
     impl fmt::Display for TeamName {
         fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
             self.0.fmt(f)
@@ -87,6 +93,14 @@ mod team_name {
     impl hash::Hash for TeamName {
         fn hash<H: hash::Hasher>(&self, state: &mut H) {
             self.normalized().hash(state)
+        }
+    }
+
+    impl std::str::FromStr for TeamName {
+        type Err = std::convert::Infallible;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            Ok(s.into())
         }
     }
 
