@@ -88,8 +88,11 @@ mod handlers {
     }
 }
 
+//TODO: make secret key be randomized each run
+const SECRET_KEY: &[u8] = b"This is my secret key";
+
 fn sign_on_team_name(team_name: &TeamName) -> TeamToken {
-    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(b"This is my secret key")
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&SECRET_KEY)
         .expect("Hmac init should never be a problem");
 
     mac.input(team_name.as_str().as_bytes());
@@ -97,11 +100,24 @@ fn sign_on_team_name(team_name: &TeamName) -> TeamToken {
     TeamToken { token: HexString::from_bytes(mac.result().code().as_slice()) }
 }
 
+fn verify_team_token(token: &TeamToken, team_name: &TeamName) -> bool {
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&SECRET_KEY)
+        .expect("Hmac init should never be a problem");
+
+    mac.input(team_name.as_str().as_bytes());
+
+    match mac.verify(&token.token.as_bytes()) {
+        Ok(_) => true,
+        Err(_) => false
+    }
+}
+
 mod filters {
     use crate::teams_db::TeamsDb;
     use warp::Filter;
     use crate::team::TeamName;
     use hex_string::HexString;
+    use crate::{TeamToken, verify_team_token};
 
     fn with_db(db: TeamsDb) -> impl Filter<Extract = (TeamsDb,), Error = std::convert::Infallible> + Clone {
         warp::any().map(move || db.clone())
@@ -130,8 +146,15 @@ mod filters {
         warp::get()
             .and(warp::path!("team" / TeamName / HexString))
             .map(|team_name: TeamName, team_token: HexString| {
+                let team_token = TeamToken { token: team_token};
+                // Todo: improve and take out
 
-                Ok(format!("{}: {}", team_name, team_token.as_str()))
+                if verify_team_token(&team_token, &team_name) {
+                    Ok(format!("good to go"))
+                } else {
+                    Ok(format!("bad token"))
+                }
+
             })
     }
 
