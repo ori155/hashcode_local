@@ -12,21 +12,21 @@ pub mod teams_db {
     use std::sync::Arc;
     use std::collections::HashMap;
 
-    use crate::team::Team;
+    use crate::team::{Team, TeamName};
 
     #[derive(Clone)]
     pub struct TeamsDb {
-        inner: Arc<RwLock<HashMap<String, Team>>>
+        inner: Arc<RwLock<HashMap<TeamName, Team>>>
     }
 
     impl TeamsDb {
         pub fn new() -> Self {
-            Self{inner: Arc::new(RwLock::new(HashMap::<String, Team>::new()))}
+            Self{inner: Arc::new(RwLock::new(HashMap::new()))}
         }
 
-        pub async fn contains(&self, team: &Team) -> bool {
+        pub async fn contains(&self, team_name: &TeamName) -> bool {
             self.inner.read().await
-                .contains_key(&team.name)
+                .contains_key(team_name)
         }
 
         pub async fn insert(&mut self, team: Team) {
@@ -36,9 +36,9 @@ pub mod teams_db {
         }
 
         //TODO change to iterator
-        pub async fn list_team_names(&self) -> Vec<String> {
+        pub async fn list_team_names(&self) -> Vec<TeamName> {
             self.inner.read().await
-                .keys().map(|s| s.to_owned()).collect()
+                .keys().map(|s| s.clone()).collect()
         }
     }
 
@@ -50,9 +50,11 @@ use crate::filters::team_registration;
 
 mod handlers {
     use super::{Team, TeamsDb};
+    use crate::team::TeamName;
+
     pub async fn add_team(new_team: Team, mut teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
 
-        if teams_db.contains(&new_team).await {
+        if teams_db.contains(&new_team.name).await {
             return Ok("Err: Team Exists")
         }
 
@@ -62,7 +64,7 @@ mod handlers {
     }
 
     pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let listed_teams: Vec<String> = teams_db.list_team_names().await;
+        let listed_teams: Vec<TeamName> = teams_db.list_team_names().await;
 
         Ok(warp::reply::json(&listed_teams))
     }
@@ -134,7 +136,7 @@ mod tests {
         let teams_db = TeamsDb::new();
         let api = crate::filters::game_api(teams_db.clone());
 
-        let new_team = Team{ name: "first_team".to_owned(), participants: vec!["ori".to_owned()] };
+        let new_team = Team{ name: "first_team".into(), participants: vec!["ori".to_owned()] };
 
         let res = warp::test::request()
             .path("/register_team")
@@ -144,7 +146,7 @@ mod tests {
 
         assert_eq!(res.status(), http::StatusCode::OK);
 
-        assert!(teams_db.contains(&new_team).await);
+        assert!(teams_db.contains(&new_team.name).await);
     }
 
 }
