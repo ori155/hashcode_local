@@ -13,6 +13,7 @@ http = "0.2.0"
 tokio = {version = "0.2.13", features = ["full", "sync"]}
 serde = "1.0.104"
 serde_derive = "1.0.104"
+serde_json = "1.0.48"
 # hex-string = {git = "https://github.com/ori155/hex-string", branch = "sol"}
 hex-string = {path = "../../hex-string"}
 hmac = "0.7.1"
