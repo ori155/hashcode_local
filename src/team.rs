@@ -1,7 +1,6 @@
 use std::cmp;
 use std::hash::{Hash, Hasher};
 use serde_derive::{Deserialize, Serialize};
-use std::fmt;
 
 pub use team_name::TeamName;
 
@@ -71,7 +70,7 @@ mod team_name {
 
     impl cmp::Ord for TeamName {
         fn cmp(&self, other: &Self) -> cmp::Ordering {
-            self.normalized().cmp(&self.normalized())
+            self.normalized().cmp(&other.normalized())
         }
     }
 
