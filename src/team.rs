@@ -1,15 +1,14 @@
+use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::hash::{Hash, Hasher};
-use serde_derive::{Deserialize, Serialize};
 
 pub use team_name::TeamName;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Team {
     pub name: TeamName,
-    pub participants: Vec<String>
+    pub participants: Vec<String>,
 }
-
 
 impl cmp::PartialEq for Team {
     fn eq(&self, other: &Team) -> bool {
@@ -38,8 +37,8 @@ impl Hash for Team {
 }
 
 mod team_name {
-    use std::{fmt, cmp, convert, hash};
-    use serde_derive::{Serialize, Deserialize};
+    use serde_derive::{Deserialize, Serialize};
+    use std::{cmp, convert, fmt, hash};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct TeamName(String);
@@ -102,5 +101,4 @@ mod team_name {
             Ok(s.into())
         }
     }
-
 }
