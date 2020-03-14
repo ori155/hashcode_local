@@ -4,6 +4,7 @@ use crate::{sign_on_team_name, AccessGranted, TeamToken};
 use hex_string::HexString;
 use crate::scoreboard::ScoreBoard;
 use std::collections::HashMap;
+use crate::models::solution::Solution;
 
 pub async fn add_team(
     new_team: Team,
@@ -25,8 +26,27 @@ pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::conv
     Ok(warp::reply::json(&listed_teams))
 }
 
-pub fn submit_solution(team_accessed: AccessGranted, scoreboard: ScoreBoard, solution: HashMap<String, String>) -> impl warp::Reply {
-    format!("Legit submission to {}", team_accessed.team)
+
+pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
+    use crate::models::solution::Challenge;
+
+    //TODO: bad design - editing is needed to add new challenge
+
+    match solution.challenge {
+        Challenge::Qual2020 => {
+            use hashcode_score_calc::qual2020::{InputCase, score};
+            let s = match score(&solution.solutions["a"], InputCase::A) {
+                Ok(s) => s,
+                Err(e) => {return Ok(format!("{}", e));}
+            };
+
+            scoreboard.add_team_score(&team_accessed.team, s).await;
+
+            Ok("".to_owned())
+
+        },
+    }
+
 }
 
 pub async fn test_team_token(

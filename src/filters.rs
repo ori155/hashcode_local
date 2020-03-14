@@ -49,7 +49,7 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
         .and(warp::path::path("submit"))
         .and(with_scoreboard(scoreboard))
         .and(warp::body::json())
-        .map(crate::handlers::submit_solution)
+        .and_then(crate::handlers::submit_solution)
 }
 
 pub fn game_api(
