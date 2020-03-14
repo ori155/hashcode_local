@@ -4,9 +4,10 @@ use serde_derive::{Deserialize, Serialize};
 
 mod filters;
 mod handlers;
-pub mod team;
-pub mod teams_db;
-pub use team::Team;
+mod models;
+mod teams_db;
+
+use models::team::Team;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum ApiError {
@@ -32,7 +33,72 @@ pub struct AccessGranted {
     pub team: TeamName,
 }
 
-use crate::team::TeamName;
+mod scoreboard {
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    use std::collections::HashMap;
+    use crate::models::TeamName;
+
+    type Score = u64;
+
+    #[derive(Clone)]
+    pub struct ScoreBoard {
+    db: Arc<RwLock<HashMap<TeamName, Vec<Score>>>>
+}
+
+    impl ScoreBoard {
+        pub fn new() -> Self {
+            Self { db: Arc::new(RwLock::new(HashMap::new())) }
+        }
+
+        pub async fn add_team_score(&mut self, team_name: &TeamName, score: Score) {
+            self.db.write().await
+                .entry(team_name.clone())
+                .or_default()
+                .push(score);
+        }
+
+        pub async fn get_best_score(&self, team_name: &TeamName) -> Option<Score> {
+            self.db.read().await
+                .get(team_name)
+                .map(|score_vec| score_vec.iter().max().clone())
+                .flatten()
+                .map(|s| *s)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::scoreboard::ScoreBoard;
+        use crate::models::TeamName;
+
+        #[tokio::test]
+        async fn can_add_team() {
+
+            let team = TeamName::from("abc");
+
+            let mut score_board = ScoreBoard::new();
+            score_board.add_team_score(&team, 120).await;
+
+        }
+
+        #[tokio::test]
+        async fn can_get_best_score() {
+
+            let team = TeamName::from("abc");
+
+            let mut score_board = ScoreBoard::new();
+            score_board.add_team_score(&team, 120).await;
+
+            assert_eq!(
+                score_board.get_best_score(&team).await,
+                Some(120)
+            )
+        }
+    }
+}
+
+use crate::models::TeamName;
 use teams_db::TeamsDb;
 
 //TODO: make secret key be randomized each run
@@ -64,10 +130,12 @@ fn verify_team_token(token: &TeamToken, team_name: &TeamName) -> bool {
 #[tokio::main]
 async fn main() {
     use filters::game_api;
+    use scoreboard::ScoreBoard;
 
     let teams = TeamsDb::new();
+    let scoreboard = ScoreBoard::new();
 
-    warp::serve(game_api(teams))
+    warp::serve(game_api(teams, scoreboard))
         .run(([127, 0, 0, 1], 8080))
         .await;
 }
@@ -79,8 +147,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_empty_teams() {
+        use crate::scoreboard::ScoreBoard;
         let teams_db = TeamsDb::new();
-        let api = crate::filters::game_api(teams_db.clone());
+        let scoreboard = ScoreBoard::new();
+        let api = crate::filters::game_api(teams_db.clone(), scoreboard);
 
         let res = warp::test::request().path("/teams").reply(&api).await;
 
@@ -90,8 +160,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_team() {
+        use crate::scoreboard::ScoreBoard;
+
         let teams_db = TeamsDb::new();
-        let api = crate::filters::game_api(teams_db.clone());
+        let scoreboard = ScoreBoard::new();
+        let api = crate::filters::game_api(teams_db.clone(), scoreboard);
 
         let new_team = Team {
             name: "first_team".into(),
@@ -113,8 +186,12 @@ mod tests {
     #[tokio::test]
     async fn test_team_access() {
         use hex_string::HexString;
+        use crate::scoreboard::ScoreBoard;
+
         let teams_db = TeamsDb::new();
-        let api = crate::filters::game_api(teams_db.clone());
+        let scoreboard = ScoreBoard::new();
+
+        let api = crate::filters::game_api(teams_db.clone(), scoreboard);
 
         let new_team = Team {
             name: "first_team".into(),

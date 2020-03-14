@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::team::{Team, TeamName};
+use crate::models::{Team, TeamName};
 
 #[derive(Clone)]
 pub struct TeamsDb {

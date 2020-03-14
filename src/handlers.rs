@@ -1,7 +1,9 @@
-use super::{Team, TeamsDb};
-use crate::team::TeamName;
+use crate::teams_db::TeamsDb;
+use crate::models::{TeamName, Team};
 use crate::{sign_on_team_name, AccessGranted, TeamToken};
 use hex_string::HexString;
+use crate::scoreboard::ScoreBoard;
+use std::collections::HashMap;
 
 pub async fn add_team(
     new_team: Team,
@@ -23,7 +25,7 @@ pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::conv
     Ok(warp::reply::json(&listed_teams))
 }
 
-pub fn submit_solution(team_accessed: AccessGranted) -> impl warp::Reply {
+pub fn submit_solution(team_accessed: AccessGranted, scoreboard: ScoreBoard, solution: HashMap<String, String>) -> impl warp::Reply {
     format!("Legit submission to {}", team_accessed.team)
 }
 
