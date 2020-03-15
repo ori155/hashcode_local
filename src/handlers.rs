@@ -32,36 +32,38 @@ pub struct UnknownInputCase;
 impl warp::reject::Reject for UnknownInputCase {}
 
 #[derive(Debug)]
-pub struct BadSubmissionFormat(hashcode_score_calc::qual2020::ScoringError);
+pub struct UnknownChallenge;
+impl warp::reject::Reject for UnknownChallenge {}
+
+#[derive(Debug)]
+pub struct BadSubmissionFormat(hashcode_score_calc::ScoringError);
 impl warp::reject::Reject for BadSubmissionFormat {}
 
 pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
-    use crate::models::solution::Challenge;
+    use crate::models::solution::ChallengeDate;
+    use hashcode_score_calc::Score;
 
-    //TODO: bad design - editing is needed to add new challenge
+    let total_score = {
+        let challenges = hashcode_score_calc::get_challenges();
+        let relevant_challenge = challenges.iter()
+            .find(|&c| c.date == solution.challenge)
+            .ok_or(warp::reject::custom(UnknownChallenge))?;
 
-    match solution.challenge {
-        Challenge::Qual2020 => {
-            use hashcode_score_calc::qual2020::score;
-            // TODO: exploitable - need to make sure that each solution is submitted maximum once
-            let mut total_score = 0;
-            for (input_id, sol) in solution.solutions.iter() {
-                let s = match score(sol,
-                                    input_id.parse()
-                                        .map_err(|_| warp::reject::custom(UnknownInputCase))?) {
-                    Ok(s) => s,
-                    Err(e) => { return Err(warp::reject::custom(BadSubmissionFormat(e))); }
-                };
+        let mut total_score: Score = 0;
+        for input_file_name in &relevant_challenge.input_file_names {
+            let submission = match solution.solutions.get(input_file_name) {
+                None => { continue },
+                Some(sub) => sub,
+            };
 
-                total_score += s;
-            }
-            scoreboard.add_team_score(&team_accessed.team, total_score).await;
+            total_score += (relevant_challenge.score_function)(submission, input_file_name)
+                .map_err(|e| warp::reject::custom(BadSubmissionFormat(e)))?;
+        }
+        total_score
+    };
 
-            Ok(warp::reply::json(&total_score))
-
-        },
-    }
-
+    scoreboard.add_team_score(&team_accessed.team, total_score).await;
+    Ok(warp::reply::json(&total_score))
 }
 
 pub async fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {

@@ -4,18 +4,14 @@ pub mod team_name;
 pub mod solution {
     use serde_derive::{Deserialize, Serialize};
 
-    #[derive(Serialize, Deserialize, Debug)]
-    pub enum Challenge {
-        Qual2020
-    }
-
-    pub type InputId = String;
+    pub use hashcode_score_calc::ChallengeDate;
+    pub use hashcode_score_calc::InputFileName;
 
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Solution {
-        pub challenge: Challenge,
-        pub solutions: std::collections::HashMap<InputId, String>
+        pub challenge: ChallengeDate,
+        pub solutions: std::collections::HashMap<InputFileName, String>
     }
 }
 

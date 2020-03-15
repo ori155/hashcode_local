@@ -35,7 +35,9 @@ function submit_files() {
         console.log("Got data for a");
 
         var sol = {
-            "challenge": "Qual2020",
+            "challenge": {
+                "Qualification": 2020
+                },
             "solutions": {
                 "a": d
                 }

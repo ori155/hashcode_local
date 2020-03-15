@@ -83,7 +83,7 @@ async fn main() {
 mod tests {
     use crate::teams_db::TeamsDb;
     use crate::{Team, TeamToken};
-    use crate::models::solution::{Solution, Challenge};
+    use crate::models::solution::{Solution, ChallengeDate};
     use std::collections::HashMap;
     use crate::models::TeamName;
     use crate::scoreboard::Score;
@@ -163,10 +163,10 @@ mod tests {
         );
 
         let solution = Solution {
-            challenge: Challenge::Qual2020,
+            challenge: ChallengeDate::Qualification(2020),
             solutions: {
                 let mut h = HashMap::new();
-                h.insert("a".to_owned(),
+                h.insert("a".into(),
                          include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
                 h
             }
@@ -186,7 +186,7 @@ mod tests {
             submit_path,
             res.body()
         );
-        assert_eq!(res.body(), "");
+        assert_eq!(res.body(), "16");
 
         assert_eq!(scoreboard.get_best_score(&new_team.name).await,
         Some(16),
@@ -197,6 +197,7 @@ mod tests {
     async fn test_scoreboard() {
         use hex_string::HexString;
         use crate::scoreboard::ScoreBoard;
+        use crate::models::solution::ChallengeDate;
 
         let teams_db = TeamsDb::new();
         let scoreboard = ScoreBoard::new();
@@ -254,10 +255,10 @@ mod tests {
         );
 
         let solution = Solution {
-            challenge: Challenge::Qual2020,
+            challenge: ChallengeDate::Qualification(2020),
             solutions: {
                 let mut h = HashMap::new();
-                h.insert("a".to_owned(),
+                h.insert("a".into(),
                          include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
                 h
             }
@@ -277,7 +278,7 @@ mod tests {
             submit_path,
             res.body()
         );
-        assert_eq!(res.body(), "");
+        assert_eq!(res.body(), "16");
 
         let score = {
             let res = warp::test::request()
