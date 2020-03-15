@@ -26,6 +26,9 @@ pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::conv
     Ok(warp::reply::json(&listed_teams))
 }
 
+#[derive(Debug)]
+pub struct UnknownInputCase;
+impl warp::reject::Reject for UnknownInputCase {}
 
 pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
     use crate::models::solution::Challenge;
@@ -34,13 +37,20 @@ pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: Score
 
     match solution.challenge {
         Challenge::Qual2020 => {
-            use hashcode_score_calc::qual2020::{InputCase, score};
-            let s = match score(&solution.solutions["a"], InputCase::A) {
-                Ok(s) => s,
-                Err(e) => {return Ok(format!("{}", e));}
-            };
+            use hashcode_score_calc::qual2020::score;
+            // TODO: exploitable - need to make sure that each solution is submitted maximum once
+            let mut total_score = 0;
+            for (input_id, sol) in solution.solutions.iter() {
+                let s = match score(sol,
+                                    input_id.parse()
+                                        .map_err(|_| warp::reject::custom(UnknownInputCase))?) {
+                    Ok(s) => s,
+                    Err(e) => { return Ok(format!("{}", e)); }
+                };
 
-            scoreboard.add_team_score(&team_accessed.team, s).await;
+                total_score += s;
+            }
+            scoreboard.add_team_score(&team_accessed.team, total_score).await;
 
             Ok("".to_owned())
 
