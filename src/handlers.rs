@@ -5,6 +5,7 @@ use hex_string::HexString;
 use crate::scoreboard::{ScoreBoard, Score};
 use std::collections::HashMap;
 use crate::models::solution::Solution;
+use std::error::Error;
 
 pub async fn add_team(
     new_team: Team,
@@ -30,6 +31,10 @@ pub async fn list_teams(teams_db: TeamsDb) -> Result<impl warp::Reply, std::conv
 pub struct UnknownInputCase;
 impl warp::reject::Reject for UnknownInputCase {}
 
+#[derive(Debug)]
+pub struct BadSubmissionFormat(hashcode_score_calc::qual2020::ScoringError);
+impl warp::reject::Reject for BadSubmissionFormat {}
+
 pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
     use crate::models::solution::Challenge;
 
@@ -45,14 +50,14 @@ pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: Score
                                     input_id.parse()
                                         .map_err(|_| warp::reject::custom(UnknownInputCase))?) {
                     Ok(s) => s,
-                    Err(e) => { return Ok(format!("{}", e)); }
+                    Err(e) => { return Err(warp::reject::custom(BadSubmissionFormat(e))); }
                 };
 
                 total_score += s;
             }
             scoreboard.add_team_score(&team_accessed.team, total_score).await;
 
-            Ok("".to_owned())
+            Ok(warp::reply::json(&total_score))
 
         },
     }
