@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use hex_string::HexString;
 use hmac::Mac;
 use serde_derive::{Deserialize, Serialize};
@@ -38,11 +41,14 @@ pub struct AccessGranted {
 use crate::models::TeamName;
 use teams_db::TeamsDb;
 
-//TODO: make secret key be randomized each run
-const SECRET_KEY: &[u8] = b"This is my secret key";
+lazy_static!{
+    pub static ref SECRET_KEY: [u8; 32] = {
+        rand::random()
+    };
+}
 
 fn sign_on_team_name(team_name: &TeamName) -> TeamToken {
-    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&SECRET_KEY)
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&*SECRET_KEY)
         .expect("Hmac init should never be a problem");
 
     mac.input(team_name.as_str().as_bytes());
@@ -53,7 +59,7 @@ fn sign_on_team_name(team_name: &TeamName) -> TeamToken {
 }
 
 fn verify_team_token(token: &TeamToken, team_name: &TeamName) -> bool {
-    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&SECRET_KEY)
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_varkey(&*SECRET_KEY)
         .expect("Hmac init should never be a problem");
 
     mac.input(team_name.as_str().as_bytes());

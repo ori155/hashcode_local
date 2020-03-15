@@ -38,7 +38,7 @@ pub fn list_teams(
 }
 
 pub fn team_access() -> impl Filter<Extract = (AccessGranted,), Error = warp::Rejection> + Clone {
-    //Todo: test team exists
+    //Todo: test team exists - key is random so Token is hard to forge
     warp::path!("team" / TeamName / HexString / ..).and_then(crate::handlers::test_team_token)
 }
 
