@@ -3,7 +3,7 @@ use tokio::sync::RwLock;
 use std::collections::HashMap;
 use crate::models::TeamName;
 
-type Score = u64;
+pub type Score = u64;
 
 #[derive(Clone)]
 pub struct ScoreBoard {
@@ -28,6 +28,13 @@ impl ScoreBoard {
             .map(|score_vec| score_vec.iter().max().clone())
             .flatten()
             .map(|s| *s)
+    }
+
+    pub async fn best_scores(&self) -> HashMap<TeamName, Score> {
+        self.db.read().await
+            .iter()
+            .map(|(name, scores): (&TeamName, &Vec<Score>)| (name.clone(), *scores.iter().max().unwrap_or(&0)))
+            .collect()
     }
 }
 

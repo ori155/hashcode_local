@@ -59,6 +59,10 @@ pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: Score
 
 }
 
+pub async fn view_scoreboard(scoreboard: ScoreBoard) -> Result<impl warp::Reply, std::convert::Infallible> {
+    Ok(warp::reply::json(&scoreboard.best_scores().await))
+}
+
 pub async fn test_team_token(
     team_name: TeamName,
     team_token: HexString,

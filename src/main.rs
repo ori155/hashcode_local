@@ -83,6 +83,8 @@ mod tests {
     use crate::{Team, TeamToken};
     use crate::models::solution::{Solution, Challenge};
     use std::collections::HashMap;
+    use crate::models::TeamName;
+    use crate::scoreboard::Score;
 
     #[tokio::test]
     async fn test_list_empty_teams() {
@@ -187,5 +189,111 @@ mod tests {
         assert_eq!(scoreboard.get_best_score(&new_team.name).await,
         Some(16),
         "The example should score 16 points");
+    }
+
+    #[tokio::test]
+    async fn test_scoreboard() {
+        use hex_string::HexString;
+        use crate::scoreboard::ScoreBoard;
+
+        let teams_db = TeamsDb::new();
+        let scoreboard = ScoreBoard::new();
+
+        let api = crate::filters::game_api(teams_db.clone(), scoreboard.clone());
+
+        let empty_scoreboard = {
+            let res = warp::test::request()
+                .path("/scoreboard")
+                .method("GET")
+                .reply(&api)
+                .await;
+
+            assert_eq!(
+                res.status(),
+                http::StatusCode::OK,
+                "Couldn't retrieve scoreboard"
+            );
+
+            serde_json::from_slice::<HashMap<TeamName, Score>>(res.body()).expect("Should be a json")
+        };
+
+        assert_eq!(
+            empty_scoreboard.len(),
+            0,
+            "scoreboard should have been empty"
+        );
+
+        
+
+        let new_team = Team {
+            name: "first_team".into(),
+            participants: vec!["ori".to_owned()],
+        };
+
+        let res = warp::test::request()
+            .path("/register_team")
+            .method("POST")
+            .json(&new_team)
+            .reply(&api)
+            .await;
+
+        assert_eq!(
+            res.status(),
+            http::StatusCode::OK,
+            "team registration failed"
+        );
+        let team_token: TeamToken =
+            serde_json::from_slice(res.body()).expect("should receive token");
+
+        let submit_path = format!(
+            "/team/{}/{}/submit",
+            new_team.name,
+            HexString::from_bytes(&team_token.token).as_str()
+        );
+
+        let solution = Solution {
+            challenge: Challenge::Qual2020,
+            solutions: {
+                let mut h = HashMap::new();
+                h.insert("a".to_owned(),
+                         include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
+                h
+            }
+        };
+
+        let res = warp::test::request()
+            .method("POST")
+            .path(&submit_path)
+            .json(&solution)
+            .reply(&api)
+            .await;
+
+        assert_eq!(
+            res.status(),
+            http::StatusCode::OK,
+            "failed to submit as team in {} with body {:?}",
+            submit_path,
+            res.body()
+        );
+        assert_eq!(res.body(), "");
+
+        let score = {
+            let res = warp::test::request()
+                .path("/scoreboard")
+                .method("GET")
+                .reply(&api)
+                .await;
+
+            assert_eq!(
+                res.status(),
+                http::StatusCode::OK,
+                "Couldn't retrieve scoreboard"
+            );
+
+            serde_json::from_slice::<HashMap<TeamName, Score>>(res.body()).expect("Should be a json")
+        };
+
+        assert_eq!(score[&new_team.name], 16);
+
     }
 }

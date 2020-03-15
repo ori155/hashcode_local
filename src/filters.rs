@@ -52,11 +52,20 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
         .and_then(crate::handlers::submit_solution)
 }
 
+pub fn view_scoreboard(scoreboard: ScoreBoard) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
+{
+    warp::get()
+        .and(warp::path::path("scoreboard"))
+        .and(with_scoreboard(scoreboard))
+        .and_then(crate::handlers::view_scoreboard)
+}
+
 pub fn game_api(
     teams: TeamsDb,
     scoreboard: ScoreBoard
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     team_registration(teams.clone())
         .or(list_teams(teams.clone()))
-        .or(submit_solution(scoreboard))
+        .or(submit_solution(scoreboard.clone()))
+        .or(view_scoreboard(scoreboard))
 }
