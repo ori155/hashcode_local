@@ -69,6 +69,8 @@ async fn main() {
     use filters::game_api;
     use scoreboard::ScoreBoard;
 
+    pretty_env_logger::init();
+
     let teams = TeamsDb::new();
     let scoreboard = ScoreBoard::new();
 

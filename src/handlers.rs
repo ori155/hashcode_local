@@ -2,7 +2,7 @@ use crate::teams_db::TeamsDb;
 use crate::models::{TeamName, Team};
 use crate::{sign_on_team_name, AccessGranted, TeamToken};
 use hex_string::HexString;
-use crate::scoreboard::ScoreBoard;
+use crate::scoreboard::{ScoreBoard, Score};
 use std::collections::HashMap;
 use crate::models::solution::Solution;
 
@@ -59,8 +59,15 @@ pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: Score
 
 }
 
-pub async fn view_scoreboard(scoreboard: ScoreBoard) -> Result<impl warp::Reply, std::convert::Infallible> {
-    Ok(warp::reply::json(&scoreboard.best_scores().await))
+pub async fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
+
+    let mut score_view = HashMap::new();
+    for tn in teams.list_team_names().await {
+        let best_score_of_team = scoreboard.get_best_score(&tn).await.unwrap_or(0);
+        score_view.insert(tn, best_score_of_team);
+    }
+
+    Ok(warp::reply::json(&score_view))
 }
 
 pub async fn test_team_token(

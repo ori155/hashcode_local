@@ -52,11 +52,12 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
         .and_then(crate::handlers::submit_solution)
 }
 
-pub fn view_scoreboard(scoreboard: ScoreBoard) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
+pub fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
 {
     warp::get()
         .and(warp::path::path("scoreboard"))
         .and(with_scoreboard(scoreboard))
+        .and(with_db(teams))
         .and_then(crate::handlers::view_scoreboard)
 }
 
@@ -65,7 +66,18 @@ pub fn game_api(
     scoreboard: ScoreBoard
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     team_registration(teams.clone())
+        .with(warp::log("team-registration"))
         .or(list_teams(teams.clone()))
         .or(submit_solution(scoreboard.clone()))
-        .or(view_scoreboard(scoreboard))
+        .or(view_scoreboard(scoreboard, teams.clone())
+            .with(warp::log("scoreboard"))
+        )
+        .or(warp::get().and(warp::path::path("app.js")).and(warp::fs::file("static/app.js")))
+        .or(warp::get().and(warp::path::path("jquery-3.4.1.min.js"))
+            .and(warp::fs::file("static/jquery-3.4.1.min.js")))
+        .or(warp::get()
+            .and(warp::path::end())
+            .and(warp::fs::file("static/submission.html"))
+            .with(warp::log("submission-html"))
+        )
 }
