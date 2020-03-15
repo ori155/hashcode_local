@@ -44,6 +44,7 @@ pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: Score
     use hashcode_score_calc::Score;
 
     let total_score = {
+        //TODO: Cach the challenges
         let challenges = hashcode_score_calc::get_challenges();
         let relevant_challenge = challenges.iter()
             .find(|&c| c.date == solution.challenge)

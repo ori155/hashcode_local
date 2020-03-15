@@ -1,3 +1,28 @@
+var submission_structure_per_challenge = {
+    "qualification-2020": {
+        "challenge" : {
+            "Qualification": 2020
+        },
+        "files": ["a", "b", "c", "d", "e", "f"]
+    },
+    "qualification-2021": {
+        "challenge" : {
+            "Qualification": 2021
+        },
+        "files": ["e", "f"]
+    },
+}
+
+$(document).ready( function() {
+    for (var known_challenge in submission_structure_per_challenge) {
+        $("#challenge-select").append("<option value=" + known_challenge + ">" + known_challenge + "</option>");
+    };
+
+    change_challenge()
+
+    $("#challenge-select").change(change_challenge);
+});
+
 function load_scoreboard() {
     var scoreboard = $("#scoreboard");
     scoreboard.empty();
@@ -12,7 +37,7 @@ function load_scoreboard() {
                 scores.push({name: team, score: res[team]});
             }
 
-            scores.sort(function(a,b) { return a.score - b.score});
+            scores.sort(function(a,b) { return b.score - a.score});
 
             for (var team_score of scores) {
                 scoreboard.append("<tr><td>" + team_score.name + "</td><td>" + team_score.score + "</td></tr>")
@@ -24,24 +49,51 @@ function load_scoreboard() {
     });
 }
 
+
+function change_challenge() {
+    $("#solution-files").empty();
+    for (var file_name of submission_structure_per_challenge[$("#challenge-select")[0].value].files) {
+        $("#solution-files").append(
+        "<label>" + file_name +
+        "<input type=\"file\" name=" + file_name + ">" +
+        "</label>"
+        )
+    };
+}
+
 function submit_files() {
-    var solution_form = document.forms["solution_files"];
+    var solution_form = document.forms["solution-files"];
 
     var reg_form = document.forms["registration"];
     var team_name = reg_form["Team Name"].value;
     var token = reg_form["Token"].value;
 
-    var sol_a = solution_form["a"].files[0].text().then(function(d) {
-        console.log("Got data for a");
+    var sub_structure = submission_structure_per_challenge[$("#challenge-select")[0].value];
 
+    var sol_array = new Array();
+
+    for (var file_name of sub_structure.files) {
+        var file_h = solution_form[file_name].files[0];
+        if (file_h == null) {
+            var p_text = null;
+        } else {
+            var p_text = file_h.text();
+        }
+        sol_array.push(p_text);
+    }
+    Promise.all(sol_array).then(function(fs) {
         var sol = {
-            "challenge": {
-                "Qualification": 2020
-                },
-            "solutions": {
-                "a": d
-                }
+            "challenge": sub_structure.challenge,
+            "solutions": {}
         };
+
+        for (var i=0; i<sub_structure.files.length; i++) {
+            if (fs[i] != null) {
+                sol.solutions[sub_structure.files[i]] = fs[i];
+            }
+        }
+
+        console.log(sol);
 
         $.ajax({
             url:'team/'+team_name+'/'+token+'/submit',

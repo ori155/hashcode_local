@@ -1,5 +1,6 @@
 <html>
 <head>
+    <link rel="stylesheet" href="bootstrap.min.css">
     <title>
         382 Hashcode
     </title>
@@ -8,22 +9,47 @@
     <script type="text/javascript" src="app.js"></script>
 </head>
 <body>
-This is the body Revised
-<h2>Scoreboard</h2>
-<button type="button" onclick="load_scoreboard()">Refresh</button>
-<table id="scoreboard">
-</table>
 
-<form name="registration">
-    <input type="text" name="Team Name">
-    <input type="text" name="Token">
-    <input type="button" value="Register" onclick="register_team()">
-</form>
+<div class="container">
+    <div class="row">
+        <h1>Select Challenge</h1>
+        <select id="challenge-select">
+        </select>
+    </div>
 
-<form name="solution_files">
-    <input type="file" name="a">
-    <input type="button" value="Score" onclick="submit_files()">
-</form>
+    <div class="row">
+        <h2>Scoreboard</h2>
+        <button type="button" onclick="load_scoreboard()">Refresh</button>
+        <table id="scoreboard" class="table">
+        </table>
+    </div>
+
+    <div class="row">
+        <form name="registration">
+            <lable>Team Name
+            <input type="text" name="Team Name"></lable>
+            <lable>Token
+            <input type="text" name="Token"></lable>
+            <input type="button" value="Register" onclick="register_team()">
+        </form>
+    </div>
+
+    <div class="row">
+        <div id="submission">
+            <form name="solution-files" id="solution-files">
+                <input type="file" name="a">
+                <input type="file" name="b">
+                <input type="file" name="c">
+                <input type="file" name="d">
+                <input type="file" name="e">
+                <input type="file" name="f">
+            </form>
+            <input type="button" value="Score" onclick="submit_files()">
+        </div>
+    </div>
+</div>
+<script src="popper.min.js"></script>
+<script src="bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
