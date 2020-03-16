@@ -1,0 +1,2 @@
+# Doesn't need to copy the compiled binaries
+target/
