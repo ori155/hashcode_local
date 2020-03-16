@@ -5,6 +5,7 @@ pub mod qual2020;
 use thiserror::Error;
 use std::fmt::Display;
 use core::fmt::Debug;
+use serde_derive::{Serialize, Deserialize};
 
 #[derive(Error, Debug)]
 pub enum ScoringError {
@@ -15,12 +16,12 @@ pub enum ScoringError {
     #[error("Doesn't have input case with name {0}")]
     UnknownInputCase(InputFileName),
     #[error("Challenge Specific: {0}")]
-    ChallengeSpecific(Box<dyn std::error::Error>),
+    ChallengeSpecific(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>),
     #[error("Error parsing the input file: {0}")]
-    InputFileError(Box<dyn std::error::Error>)
+    InputFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>)
 }
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct InputFileName(pub(crate) String);
 
 impl Display for InputFileName {
@@ -38,7 +39,7 @@ impl std::convert::From<&str> for InputFileName {
 pub type Score = u64;
 pub type Year = u32;
 
-#[derive(Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChallengeDate {
     Qualification(Year),
     Final(Year),
@@ -46,7 +47,7 @@ pub enum ChallengeDate {
 
 pub struct Challenge {
     pub input_file_names: Vec<InputFileName>,
-    pub score_function: Box<dyn Fn(&str, &InputFileName) -> Result<Score, ScoringError>>,
+    pub score_function: Box<dyn Fn(&str, &InputFileName) -> Result<Score, ScoringError> + 'static + Send + Sync>,
     pub date: ChallengeDate,
 }
 

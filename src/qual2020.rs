@@ -229,8 +229,8 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<u64, ScoringError
         if days_left <= days_to_signup { break };
         days_left -= days_to_signup;
 
-        let number_of_books_able_to_scan = min(days_left*library.max_books_per_day,
-                                               curr_signup.books_to_scan.len() as u32);
+        let number_of_books_able_to_scan = min((days_left as u64)*(library.max_books_per_day as u64),
+                                               curr_signup.books_to_scan.len() as u64);
         books_scaned.extend(curr_signup.books_to_scan.iter().take(number_of_books_able_to_scan as usize));
     }
 
