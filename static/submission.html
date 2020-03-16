@@ -10,41 +10,89 @@
 </head>
 <body>
 
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">382HCS</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse navbar-dark bg-dark" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="#" onclick="show_only('home')">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="show_only('registration')">Registration</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="show_only('new-submission')">New Submission</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="show_only('my-submissions')">My Submissions</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="show_only('scoreboard')">Scoreboard</a>
+            </li>
+        </ul>
+        <form class="form-inline my-2 my-lg-0">
+            <select id="challenge-select" class="form-control mr-sm-2"></select>
+        </form>
+    </div>
+</nav>
 <div class="container">
-    <div class="row">
-        <h1>Select Challenge</h1>
-        <select id="challenge-select">
-        </select>
+    <div id="home" class="page">
+        <h2>Home</h2>
+        <p>Welcome to the grand Coronavirus games of 2020. As the world face before doom, you have plenty of time to sharpen
+        your coding (and hopefully thinking...) skills!
+        </p>
+
+        <div id="download-links" class="list-group"></div>
     </div>
 
-    <div class="row">
+    <div id="scoreboard" class="row page">
         <h2>Scoreboard</h2>
-        <button type="button" onclick="load_scoreboard()">Refresh</button>
-        <table id="scoreboard" class="table">
+        <table id="scoreboard-table" class="table">
         </table>
     </div>
 
-    <div class="row">
-        <form name="registration">
-            <lable>Team Name
-            <input type="text" name="Team Name"></lable>
-            <lable>Token
-            <input type="text" name="Token"></lable>
-            <input type="button" value="Register" onclick="register_team()">
-        </form>
+    <div id="registration" class="page">
+        <div class="row">
+            <p>Please choose a unique name, after choosing one please hit the Register button.</p>
+            <p>After registration you'll get a secret token which will identify you as a member of a team,
+                if you already have a team token all you need to do is to write the team name and
+                token (<b>without</b> hitting the Register button), after entering them you may submit solutions.
+            </p>
+            <p><b>Refresh will "forget" the token</b>, please be responsible for you token and save it somewhere safe</p>
+        </div>
+        <div class="row">
+            <form name="registration">
+                <div class="form-group">
+                <lable>Team Name
+                <input type="text" class="form-control" name="Team Name" required="required"></lable>
+                </div>
+                <div class="form-group">
+                <lable>Token
+                <input type="text" class="form-control" name="Token"></lable>
+                </div>
+                <input class="btn btn-secondary" type="button" value="Register" onclick="register_team()">
+            </form>
+        </div>
     </div>
 
-    <div class="row">
-        <div id="submission">
+    <div id="new-submission" class="page">
+        <div class="row">
             <form name="solution-files" id="solution-files">
-                <input type="file" name="a">
-                <input type="file" name="b">
-                <input type="file" name="c">
-                <input type="file" name="d">
-                <input type="file" name="e">
-                <input type="file" name="f">
             </form>
-            <input type="button" value="Score" onclick="submit_files()">
+        </div>
+    </div>
+    <div id="my-submissions" class="page">
+        <div class="row">
+            <p>
+                This data is only local - once you go out of page or refresh, it will be vanished.
+            </p>
+            <table id="last-submission" class="table">
+                <thead><tr><th>Time</th><th>For Input</th><th>Score</th></tr></thead>
+            </table>
         </div>
     </div>
 </div>

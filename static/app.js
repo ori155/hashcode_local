@@ -3,13 +3,18 @@ var submission_structure_per_challenge = {
         "challenge" : {
             "Qualification": 2020
         },
-        "files": ["a", "b", "c", "d", "e", "f"]
+        "files": ["a", "b", "c", "d", "e", "f"],
+        "pdf_file": "hashcode_2020_online_qualification_round.pdf",
+        "in_files": "qualification_round_2020.in.zip",
+
     },
     "qualification-2021": {
         "challenge" : {
             "Qualification": 2021
         },
-        "files": ["e", "f"]
+        "files": ["e", "f"],
+        "pdf_file": "#",
+        "in_files": "#",
     },
 }
 
@@ -18,13 +23,17 @@ $(document).ready( function() {
         $("#challenge-select").append("<option value=" + known_challenge + ">" + known_challenge + "</option>");
     };
 
-    change_challenge()
-
+    change_challenge();
     $("#challenge-select").change(change_challenge);
+
+    show_only('home');
+    load_scoreboard();
 });
 
+window.setInterval(load_scoreboard, 10000);
+
 function load_scoreboard() {
-    var scoreboard = $("#scoreboard");
+    var scoreboard = $("#scoreboard-table");
     scoreboard.empty();
     $.ajax({
         url:'scoreboard',
@@ -39,8 +48,10 @@ function load_scoreboard() {
 
             scores.sort(function(a,b) { return b.score - a.score});
 
-            for (var team_score of scores) {
-                scoreboard.append("<tr><td>" + team_score.name + "</td><td>" + team_score.score + "</td></tr>")
+            scoreboard.append("<thead><tr><th>#</th><th>Team Name</th><th>Total Score</th></tr><thead>");
+            for (var i=0; i<scores.length; i++) {
+                var team_score = scores[i];
+                scoreboard.append("<tr><td>" + (i+1) + "</td><td>" + team_score.name + "</td><td>" + team_score.score + "</td></tr>");
             }
         },
         error:function(res){
@@ -50,15 +61,40 @@ function load_scoreboard() {
 }
 
 
+function show_only(pn) {
+    $(".page[id!='" + pn + "']").hide();
+    $("#" + pn).show();
+}
+
+
 function change_challenge() {
-    $("#solution-files").empty();
-    for (var file_name of submission_structure_per_challenge[$("#challenge-select")[0].value].files) {
-        $("#solution-files").append(
+    var sol_files_form = $("#solution-files");
+    var sub_structure = submission_structure_per_challenge[$("#challenge-select")[0].value];
+
+    sol_files_form.empty();
+    for (var file_name of sub_structure.files) {
+        sol_files_form.append(
+        "<div class='form-group'>" +
         "<label>" + file_name +
-        "<input type=\"file\" name=" + file_name + ">" +
-        "</label>"
+        "<input class='form-control-file' type='file' name=" + file_name + ">" +
+        "</label>" +
+        "</div>"
         )
     };
+
+
+    sol_files_form.append(
+        "<input class='btn btn-secondary btn-lg' type='button' value='Score' onclick='submit_files(); show_only(\"my-submissions\")'>"
+        );
+
+    $("#download-links").empty();
+    $("#download-links").append(
+        "<a href='" + sub_structure.pdf_file + "'>Problem statement</a>"
+    );
+
+    $("#download-links").append(
+        "<a href='" + sub_structure.in_files + "'>Input files</a>"
+    );
 }
 
 function submit_files() {
@@ -103,11 +139,22 @@ function submit_files() {
             contentType: "application/json; charset=utf-8",
             success:function(res){
                 console.log("successful submit - scored " + res);
-                alert("Successful submit - scored " + res);
+                var last_submissions_table = $("#last-submission");
+                var currentdate = new Date();
+                var datetime = currentdate.getDate() + "/"
+                                + (currentdate.getMonth()+1)  + "/"
+                                + currentdate.getFullYear() + " @ "
+                                + currentdate.getHours() + ":"
+                                + currentdate.getMinutes() + ":"
+                                + currentdate.getSeconds();
+
+                for (var in_file_name in res) {
+                    last_submissions_table.append("<tr><td>" + datetime +"</td><td>" + in_file_name + "</td><td>" + res[in_file_name] + "</td></tr>");
+                }
             },
             error:function(jqxhr, status){
-                alert("Submission failed: " + status)
-                console.log(jqxhr);
+                alert("Submission failed: " + jqxhr.responseText)
+                console.log("Submission failed: " + status)
             }
         });
 
