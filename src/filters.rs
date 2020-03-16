@@ -4,11 +4,20 @@ use crate::AccessGranted;
 use hex_string::HexString;
 use warp::Filter;
 use crate::scoreboard::ScoreBoard;
+use hashcode_score_calc::Challenge;
+use std::sync::Arc;
 
 fn with_db(
     db: TeamsDb,
 ) -> impl Filter<Extract = (TeamsDb,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
+}
+
+fn with_challenges(
+    challenges: Vec<Challenge>,
+) -> impl Filter<Extract = (Arc<Vec<Challenge>>,), Error = std::convert::Infallible> + Clone {
+    let ac = Arc::new(challenges);
+    warp::any().map(move || ac.clone())
 }
 
 fn with_scoreboard(
@@ -47,6 +56,7 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
     warp::post()
         .and(team_access())
         .and(warp::path::path("submit"))
+        .and(with_challenges(hashcode_score_calc::get_challenges()))
         .and(with_scoreboard(scoreboard))
         .and(warp::body::json())
         .and_then(crate::handlers::submit_solution)

@@ -38,12 +38,14 @@ impl warp::reject::Reject for UnknownChallenge {}
 pub struct BadSubmissionFormat(hashcode_score_calc::ScoringError);
 impl warp::reject::Reject for BadSubmissionFormat {}
 
-pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
+use hashcode_score_calc::Challenge;
+use std::sync::Arc;
+
+pub async fn submit_solution(team_accessed: AccessGranted, challenges: Arc<Vec<Challenge>>, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
     use hashcode_score_calc::Score;
 
     let new_scores = {
-        //TODO: Cach the challenges
-        let challenges = hashcode_score_calc::get_challenges();
+
         let relevant_challenge = challenges.iter()
             .find(|&c| c.date == solution.challenge)
             .ok_or(warp::reject::custom(UnknownChallenge))?;
