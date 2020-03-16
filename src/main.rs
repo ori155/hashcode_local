@@ -78,15 +78,17 @@ async fn main() {
     pretty_env_logger::init();
 
     let private_local_server: bool = std::env::var("HASHCODE_LOCAL").is_ok();
-    let hashcode_port: u32 = std::env::var("HASHCODE_PORT")
-        .map(|s| s.parse())
+    let hashcode_port: u16 = std::env::var("HASHCODE_PORT")
+        .map(|s| s.parse().expect("HASHCODE_PORT should be a number"))
         .unwrap_or(80);
+
+    let bind_address = (if private_local_server {[127u8,0,0,1]} else {[0,0,0,0]}, hashcode_port);
 
     let teams = TeamsDb::new();
     let scoreboard = ScoreBoard::new();
 
     warp::serve(game_api(teams, scoreboard))
-        .run((if private_local_server {[127,0,0,1]} else {[0,0,0,0]}, hashcode_port))
+        .run(bind_address)
         .await;
 }
 
