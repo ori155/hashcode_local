@@ -199,10 +199,10 @@ mod tests {
             submit_path,
             res.body()
         );
-        assert_eq!(res.body(), "16");
+        assert_eq!(res.body(), "{\"a\":16}");
 
-        assert_eq!(scoreboard.get_best_score(&new_team.name).await,
-        Some(16),
+        assert_eq!(scoreboard.total_score(&new_team.name).await,
+        16,
         "The example should score 16 points");
     }
 
@@ -291,7 +291,7 @@ mod tests {
             submit_path,
             res.body()
         );
-        assert_eq!(res.body(), "16");
+        assert_eq!(res.body(), "{\"a\":16}");
 
         let score = {
             let res = warp::test::request()

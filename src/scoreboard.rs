@@ -2,12 +2,13 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::collections::HashMap;
 use crate::models::TeamName;
+use crate::models::solution::InputFileName;
 
 pub type Score = u64;
 
 #[derive(Clone)]
 pub struct ScoreBoard {
-    db: Arc<RwLock<HashMap<TeamName, Vec<Score>>>>
+    db: Arc<RwLock<HashMap<TeamName, HashMap<InputFileName, Vec<Score>>>>>
 }
 
 impl ScoreBoard {
@@ -15,26 +16,29 @@ impl ScoreBoard {
         Self { db: Arc::new(RwLock::new(HashMap::new())) }
     }
 
-    pub async fn add_team_score(&mut self, team_name: &TeamName, score: Score) {
+    pub async fn add_team_score(&mut self, team_name: &TeamName, file_name: &InputFileName, score: Score) {
         self.db.write().await
             .entry(team_name.clone())
+            .or_default()
+            .entry(file_name.clone())
             .or_default()
             .push(score);
     }
 
-    pub async fn get_best_score(&self, team_name: &TeamName) -> Option<Score> {
+    pub async fn best_per_input(&self, team_name: &TeamName) -> HashMap<InputFileName, Score> {
         self.db.read().await
             .get(team_name)
-            .map(|score_vec| score_vec.iter().max().clone())
-            .flatten()
-            .map(|s| *s)
+            .map(|in_to_score_vec: &HashMap<InputFileName, Vec<Score>>| -> HashMap<InputFileName, Score> {
+                in_to_score_vec.iter()
+                    .map(|(i, sv)| (i.clone(), *sv.iter().max().unwrap_or(&0)))
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
-    pub async fn best_scores(&self) -> HashMap<TeamName, Score> {
-        self.db.read().await
-            .iter()
-            .map(|(name, scores): (&TeamName, &Vec<Score>)| (name.clone(), *scores.iter().max().unwrap_or(&0)))
-            .collect()
+    pub async fn total_score(&self, team_name: &TeamName) -> Score {
+        self.best_per_input(team_name).await
+            .values().sum()
     }
 }
 
@@ -47,23 +51,25 @@ mod tests {
     async fn can_add_team() {
 
         let team = TeamName::from("abc");
+        let input_file_name = "a".into();
 
         let mut score_board = ScoreBoard::new();
-        score_board.add_team_score(&team, 120).await;
+        score_board.add_team_score(&team, &input_file_name, 120).await;
 
     }
 
     #[tokio::test]
-    async fn can_get_best_score() {
+    async fn can_get_best_total_score() {
 
         let team = TeamName::from("abc");
+        let input_file_name = "a".into();
 
         let mut score_board = ScoreBoard::new();
-        score_board.add_team_score(&team, 120).await;
+        score_board.add_team_score(&team, &input_file_name, 120).await;
 
         assert_eq!(
-            score_board.get_best_score(&team).await,
-            Some(120)
+            score_board.total_score(&team).await,
+            120
         )
     }
 }

@@ -2,10 +2,9 @@ use crate::teams_db::TeamsDb;
 use crate::models::{TeamName, Team};
 use crate::{sign_on_team_name, AccessGranted, TeamToken};
 use hex_string::HexString;
-use crate::scoreboard::{ScoreBoard, Score};
+use crate::scoreboard::ScoreBoard;
 use std::collections::HashMap;
-use crate::models::solution::Solution;
-use std::error::Error;
+use crate::models::solution::{Solution, InputFileName};
 
 pub async fn add_team(
     new_team: Team,
@@ -40,38 +39,42 @@ pub struct BadSubmissionFormat(hashcode_score_calc::ScoringError);
 impl warp::reject::Reject for BadSubmissionFormat {}
 
 pub async fn submit_solution(team_accessed: AccessGranted, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
-    use crate::models::solution::ChallengeDate;
     use hashcode_score_calc::Score;
 
-    let total_score = {
+    let new_scores = {
         //TODO: Cach the challenges
         let challenges = hashcode_score_calc::get_challenges();
         let relevant_challenge = challenges.iter()
             .find(|&c| c.date == solution.challenge)
             .ok_or(warp::reject::custom(UnknownChallenge))?;
 
-        let mut total_score: Score = 0;
+        let mut new_scores = HashMap::<InputFileName, Score>::new();
         for input_file_name in &relevant_challenge.input_file_names {
             let submission = match solution.solutions.get(input_file_name) {
                 None => { continue },
                 Some(sub) => sub,
             };
 
-            total_score += (relevant_challenge.score_function)(submission, input_file_name)
+            let score = (relevant_challenge.score_function)(submission, input_file_name)
                 .map_err(|e| warp::reject::custom(BadSubmissionFormat(e)))?;
+
+            new_scores.insert(input_file_name.clone(), score);
         }
-        total_score
+        new_scores
     };
 
-    scoreboard.add_team_score(&team_accessed.team, total_score).await;
-    Ok(warp::reply::json(&total_score))
+    for (input_file_name, score) in &new_scores {
+        scoreboard.add_team_score(&team_accessed.team, input_file_name, *score).await;
+    }
+
+    Ok(warp::reply::json(&new_scores))
 }
 
 pub async fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
 
     let mut score_view = HashMap::new();
     for tn in teams.list_team_names().await {
-        let best_score_of_team = scoreboard.get_best_score(&tn).await.unwrap_or(0);
+        let best_score_of_team = scoreboard.total_score(&tn).await;
         score_view.insert(tn, best_score_of_team);
     }
 
