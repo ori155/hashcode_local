@@ -102,12 +102,12 @@ function submit_files() {
             dataType: 'json',
             contentType: "application/json; charset=utf-8",
             success:function(res){
-                console.log(res);
-                alert("Successful submit");
+                console.log("successful submit - scored " + res);
+                alert("Successful submit - scored " + res);
             },
-            error:function(res){
-                console.log("Bad thing happend!");
-                console.log(res);
+            error:function(jqxhr, status){
+                alert("Submission failed: " + status)
+                console.log(jqxhr);
             }
         });
 
