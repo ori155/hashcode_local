@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+	"hashcode_score_calc",
+	"hashcode_server"
+]
