@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 pub mod qual2020;
+pub mod qual2016;
 
 use thiserror::Error;
 use std::fmt::Display;
