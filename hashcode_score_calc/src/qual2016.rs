@@ -77,7 +77,7 @@ mod parsing {
     }
 
     fn first_line(input: &str) -> IResult<&str, (Row, Col, DroneID, Turn, Weight)> {
-        tuple((decimal_number_ms, decimal_number_ms, decimal_number_ms, decimal_number_ms, decimal_number))(input)
+        tuple((decimal_number_ms, decimal_number_ms, decimal_number_ms, decimal_number_ms, decimal_number_ms))(input)
     }
 
     fn products(input: &str) -> IResult<&str, Vec<Product>> {
@@ -244,7 +244,7 @@ impl Case {
 }
 
 lazy_static!{
-    static ref CASE_EXAMLE: Case = Case::parse(include_str!("../assets/2016qual/inputs/example.in")).
+    static ref CASE_EXAMPLE: Case = Case::parse(include_str!("../assets/2016qual/inputs/example.in")).
                                         unwrap();
     static ref CASE_BUSY_DAY: Case = Case::parse(include_str!("../assets/2016qual/inputs/busy_day.in")).
                                         unwrap();
@@ -255,5 +255,12 @@ lazy_static!{
 }
 
 pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringError> {
+    let case: &Case = match case {
+        InputFileName(ref s) if s.starts_with("example") => &*CASE_EXAMPLE,
+        InputFileName(ref s) if s.starts_with("busy_day") => &*CASE_BUSY_DAY,
+        InputFileName(ref s) if s.starts_with("mother_of_all_warehouses") => &*CASE_MOTHER_OF_ALL_WAREHOUSES,
+        InputFileName(ref s) if s.starts_with("redundancy") => &*CASE_REDUNDANCY,
+        input_case @ InputFileName(_) => return Err(ScoringError::UnknownInputCase(input_case.clone()))
+    };
    Ok(0)
 }
