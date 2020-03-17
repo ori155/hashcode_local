@@ -95,7 +95,7 @@ function change_challenge() {
 
     $("#download-links").empty();
     $("#download-links").append(
-        "<a href='" + sub_structure.pdf_file + "'>Problem statement</a>"
+        "<a href='" + sub_structure.pdf_file + "' target='_blank'>Problem statement</a>"
     );
 
     $("#download-links").append(
