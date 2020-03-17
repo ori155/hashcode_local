@@ -19,7 +19,9 @@ pub enum ScoringError {
     #[error("Challenge Specific: {0}")]
     ChallengeSpecific(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>),
     #[error("Error parsing the input file: {0}")]
-    InputFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>)
+    InputFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>),
+    #[error("Error parsing the submission file: {0}")]
+    SubmissionFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>)
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone, Hash, Serialize, Deserialize)]

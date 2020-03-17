@@ -5,7 +5,9 @@ use crate::{ScoringError, InputFileName, Score};
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum Qual2016ScoringError {
     #[error("Tried to access location row: {row}, col: {col} which is out of bounds")]
-    LocationOutOfMap {row: Row, col: Col}
+    LocationOutOfMap {row: Row, col: Col},
+    #[error("There is a command for drone {drone_id}, which is present in this case")]
+    CommandIssuedToUnknownDrone {drone_id: DroneID},
 }
 
 
@@ -23,6 +25,7 @@ type DroneID = u16;
 type Weight = u16;
 type ProductID = u16;
 type OrderID = u16;
+type CommandNumber = u64; // DroneID X Turn
 type WarehouseProductInventory = u16;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -57,10 +60,50 @@ struct Order {
     pub products: Vec<ProductID>
 }
 
+pub enum Command {
+    Load {
+        drone_id: DroneID,
+        warehouse_id: WarehouseID,
+        product_id: ProductID,
+        number_of_items: u32
+    },
+    Unload {
+        drone_id: DroneID,
+        warehouse_id: WarehouseID,
+        product_id: ProductID,
+        number_of_items: u32
+    },
+    Deliver {
+        drone_id: DroneID,
+        order_id: OrderID,
+        product_id: ProductID,
+        number_of_items: u32
+    },
+    Wait {
+        drone_id: DroneID,
+        turns: Turn
+    }
+}
+
+impl Command {
+    pub fn get_drone_id(&self) -> DroneID{
+        use Command::*;
+        match self {
+            Load{ drone_id, .. } => *drone_id,
+            Unload{ drone_id, .. } => *drone_id,
+            Deliver{ drone_id, .. } => *drone_id,
+            Wait{ drone_id, .. } => *drone_id
+        }
+    }
+}
+
 mod parsing {
     use nom::{IResult, combinator::map_res, character::complete::digit1};
     use nom::sequence::tuple;
     use nom::multi::many_m_n;
+    use nom::character::complete::multispace0;
+    use nom::sequence::terminated;
+
     use super::{Row, Col, DroneID, Turn, Weight, ProductID, Product,
                 Warehouse, WarehouseID, Location, WarehouseProductInventory,
                 Order, OrderID, MapSize};
@@ -71,8 +114,6 @@ mod parsing {
     }
 
     fn decimal_number_ms<N: FromStr>(input: &str) -> IResult<&str, N> {
-        use nom::character::complete::multispace0;
-        use nom::sequence::terminated;
         terminated(decimal_number, multispace0)(input)
     }
 
@@ -166,8 +207,75 @@ mod parsing {
             warehouses: case_warehouses,
             total_turns: turns,
             number_of_drones: drones,
-            max_payload
+            max_payload,
+            orders: case_orders
         }))
+    }
+
+    use nom::character::complete::one_of;
+    fn one_command(input: &str) -> IResult<&str, Command> {
+        let (input, drone_id) = decimal_number_ms::<DroneID>(input)?;
+        let (input, command_type) = terminated(one_of("LUDW"), multispace0)(input)?;
+        match command_type {
+            'L' => {
+               let (input, (warehouse_id, product_id, number_of_items)) = tuple((
+                   decimal_number_ms::<WarehouseID>,
+                   decimal_number_ms::<ProductID>,
+                   decimal_number_ms::<u32>,
+               ))(input)?;
+               Ok((input, Command::Load {
+                   drone_id,
+                   warehouse_id,
+                   product_id,
+                   number_of_items
+               }))
+            },
+            'U' => {
+                let (input, (warehouse_id, product_id, number_of_items)) = tuple((
+                    decimal_number_ms::<WarehouseID>,
+                    decimal_number_ms::<ProductID>,
+                    decimal_number_ms::<u32>,
+                ))(input)?;
+                Ok((input, Command::Unload {
+                    drone_id,
+                    warehouse_id,
+                    product_id,
+                    number_of_items
+                }))
+
+            },
+            'D' => {
+                let (input, (order_id, product_id, number_of_items)) = tuple((
+                    decimal_number_ms::<OrderID>,
+                    decimal_number_ms::<ProductID>,
+                    decimal_number_ms::<u32>,
+                ))(input)?;
+
+                Ok((input, Command::Deliver {
+                    drone_id,
+                    order_id,
+                    product_id,
+                    number_of_items
+                }))
+
+            },
+            'W' => {
+                let (input, turns) = decimal_number_ms::<Turn>(input)?;
+
+                Ok((input, Command::Wait { drone_id, turns }))
+
+            },
+            _ => unreachable!("Already checked that this is a known command")
+        }
+    }
+
+    use super::Command;
+    use super::CommandNumber;
+    pub fn parse_submission(input: &str) -> IResult<&str, Vec<Command>> {
+        let (input, number_of_commands) = decimal_number_ms::<CommandNumber>(input)?;
+        many_m_n(number_of_commands as usize,
+                 number_of_commands as usize,
+                 one_command)(input)
     }
 
     #[cfg(test)]
@@ -232,13 +340,14 @@ pub struct Case {
     warehouses: Vec<Warehouse>,
     total_turns: Turn,
     number_of_drones: DroneID,
-    max_payload: Weight
+    max_payload: Weight,
+    orders: Vec<Order>
 }
 
 impl Case {
     fn parse(input: &'static str) -> Result<Self, ScoringError> {
         parsing::parse_input_file(input)
-            .map(|(input, case)| case)
+            .map(|(_input, case)| case)
             .map_err(|e| ScoringError::InputFileError(Box::new(e)))
     }
 }
@@ -254,6 +363,22 @@ lazy_static!{
                                         unwrap();
 }
 
+struct Drone {
+    id: DroneID,
+    to_execute: Vec<Command>,
+    curr_command: Option<Command>
+}
+
+impl Drone {
+    pub fn new(id: DroneID) -> Self {
+        Self{
+            id,
+            to_execute: Vec::new(),
+            curr_command: None
+        }
+    }
+}
+
 pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringError> {
     let case: &Case = match case {
         InputFileName(ref s) if s.starts_with("example") => &*CASE_EXAMPLE,
@@ -262,5 +387,20 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         InputFileName(ref s) if s.starts_with("redundancy") => &*CASE_REDUNDANCY,
         input_case @ InputFileName(_) => return Err(ScoringError::UnknownInputCase(input_case.clone()))
     };
+
+    let mut drones: Vec<Drone> = (0..case.number_of_drones).into_iter()
+        .map(|i| Drone::new(i))
+        .collect();
+
+    let commands: Vec<Command> = parsing::parse_submission(submission)
+        .map(|(_submission, commands)| commands)
+        .map_err(|e| ScoringError::SubmissionFileError(Box::new(e.to_owned())))?;
+
+    for command in commands {
+        let drone_id = command.get_drone_id();
+        let drone: &mut Drone = drones.get_mut(drone_id as usize)
+            .ok_or(Qual2016ScoringError::CommandIssuedToUnknownDrone {drone_id})?;
+        drone.to_execute.push(command);
+    }
    Ok(0)
 }
