@@ -8,13 +8,13 @@ var submission_structure_per_challenge = {
         "in_files": "qualification_round_2020.in.zip",
 
     },
-    "qualification-2021": {
+    "qualification-2016": {
         "challenge" : {
-            "Qualification": 2021
+            "Qualification": 2016
         },
-        "files": ["e", "f"],
-        "pdf_file": "#",
-        "in_files": "#",
+        "files": ["busy_day", "mother_of_all_warehouses", "redundancy"],
+        "pdf_file": "hashcode2016_qualification_task.pdf",
+        "in_files": "qualification_round_2016.in.zip",
     },
 }
 
