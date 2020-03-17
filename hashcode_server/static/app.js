@@ -66,6 +66,9 @@ function show_only(pn) {
     $("#" + pn).show();
 }
 
+function clear_submission_files() {
+    $("#solution-files input[type='file']").val("");
+}
 
 function change_challenge() {
     var sol_files_form = $("#solution-files");
@@ -84,7 +87,10 @@ function change_challenge() {
 
 
     sol_files_form.append(
-        "<input class='btn btn-secondary btn-lg' type='button' value='Score' onclick='submit_files(); show_only(\"my-submissions\")'>"
+        "<div class='btn-group' role='group' aria-label='submit-or-clear'>" +
+        "<input class='btn btn-danger btn-lg' type='button' value='Clear' onclick='clear_submission_files()'>" +
+        "<input class='btn btn-dark btn-lg' type='button' value='Score' onclick='submit_files(); show_only(\"my-submissions\")'>" +
+        "</div>"
         );
 
     $("#download-links").empty();
