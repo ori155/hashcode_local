@@ -6,8 +6,22 @@ use crate::{ScoringError, InputFileName, Score};
 pub enum Qual2016ScoringError {
     #[error("Tried to access location row: {row}, col: {col} which is out of bounds")]
     LocationOutOfMap {row: Row, col: Col},
-    #[error("There is a command for drone {drone_id}, which is present in this case")]
+    #[error("There is a command for drone {drone_id}, which is not present in this case")]
     CommandIssuedToUnknownDrone {drone_id: DroneID},
+    #[error("Drone {drone_id} carry too much")]
+    DronePassedWeightLimit{ drone_id: DroneID},
+    #[error("You're trying to take too much from warehouse number {warehouse_id}")]
+    OverTakingWarehouse{warehouse_id: WarehouseID},
+    #[error("You're trying to take too much from drone number {drone_id}")]
+    OverTakingDrone{ drone_id: DroneID},
+    #[error("Trying to fly to an unknown warehouse {warehouse_id}")]
+    UnknownWarehouse {warehouse_id: WarehouseID},
+    #[error("Trying to supply to unknown order {order_id}")]
+    UnknownOrder {order_id: OrderID},
+    #[error("Trying to use unknown product {product_id}")]
+    UnknownProduct {product_id: ProductID},
+    #[error("You're over supplying order {order_id}")]
+    OverSupplyingOrder{ order_id: OrderID},
 }
 
 
@@ -40,6 +54,35 @@ struct Location {
     pub col: Col
 }
 
+impl Location {
+    pub fn flight_time(&self, other: &Location) -> Turn {
+        if self == other {
+            return 0
+        }
+        let diff_row = if self.row > other.row {self.row - other.row} else {other.row - self.row};
+        let diff_col = if self.col > other.col {self.col - other.col} else {other.col - self.col};
+        ((diff_row as f32).powi(2) + (diff_col as f32).powi(2)).sqrt().ceil() as Turn
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Location;
+    #[test]
+    fn test_flight_time_rows() {
+        let a = Location{row: 0, col:0};
+        let b = Location{row: 1, col:0};
+        assert_eq!(a.flight_time(&b), 1);
+    }
+
+    #[test]
+    fn test_flight_time_diag() {
+        let a = Location{row: 0, col:0};
+        let b = Location{row: 5, col:5};
+        assert_eq!(a.flight_time(&b), 8);
+    }
+}
+
 impl MapSize {
     pub fn loc(&self, row: Row, col: Col) -> Result<Location, Qual2016ScoringError> {
         if row < self.rows && col < self.cols {
@@ -50,38 +93,42 @@ impl MapSize {
     }
 }
 
+#[derive(Clone)]
 struct Product {
     id: ProductID,
     weight: Weight
 }
 
+#[derive(Clone)]
 struct Order {
+    pub id: OrderID,
     pub location: Location,
     pub products: Vec<ProductID>
 }
 
-pub enum Command {
-    Load {
-        drone_id: DroneID,
-        warehouse_id: WarehouseID,
-        product_id: ProductID,
-        number_of_items: u32
-    },
-    Unload {
-        drone_id: DroneID,
-        warehouse_id: WarehouseID,
-        product_id: ProductID,
-        number_of_items: u32
-    },
-    Deliver {
-        drone_id: DroneID,
-        order_id: OrderID,
-        product_id: ProductID,
-        number_of_items: u32
-    },
-    Wait {
-        drone_id: DroneID,
-        turns: Turn
+impl Order {
+    pub fn supply(&mut self, product_id: ProductID, number_of_items: WarehouseProductInventory) -> Result<(), Qual2016ScoringError> {
+        let indices_of_product = self.products.iter().enumerate()
+            .fold(Vec::new(), |mut s, (i, pid)| {
+                if *pid == product_id {
+                    s.push(i);
+                }
+                s
+            });
+
+        if indices_of_product.len() >= number_of_items as usize {
+            for i in indices_of_product.into_iter().take(number_of_items as usize) {
+                self.products.remove(i);
+            }
+            Ok(())
+        } else {
+            Err(Qual2016ScoringError::OverSupplyingOrder {order_id: self.id})
+        }
+
+
+    }
+    pub fn is_done(&self) -> bool {
+        self.products.iter().all(|x| *x == 0)
     }
 }
 
@@ -173,22 +220,27 @@ mod parsing {
         }
     }
 
-    fn one_order(input: &str) -> IResult<&str, Order> {
+    fn one_order_loc_and_prods(input: &str) -> IResult<&str, (Location, Vec<ProductID>)> {
         let (input, ord_location) = location(input)?;
         let (input, number_of_items) = decimal_number_ms::<ProductID>(input)?;
         let (input, products) = many_m_n(number_of_items as usize,
                                        number_of_items as usize,
                                        decimal_number_ms::<ProductID>)(input)?;
 
-        Ok((input, Order{ location: ord_location, products }))
+        Ok((input, (ord_location, products)))
     }
 
     fn orders(input: &str) -> IResult<&str, Vec<Order>> {
         let (input, number_of_orders) = decimal_number_ms::<OrderID>(input)?;
-        let (input, orders) = many_m_n(number_of_orders as usize,
+        let (input, locs_and_prods) = many_m_n(number_of_orders as usize,
                                        number_of_orders as usize,
-                                        one_order)(input)?;
+                                        one_order_loc_and_prods)(input)?;
 
+        let orders = locs_and_prods
+            .into_iter()
+            .enumerate()
+            .map(|(i, (loc, prods))| Order{id:i as ProductID, location: loc, products: prods})
+            .collect();
         Ok((input, orders))
 
     }
@@ -205,6 +257,7 @@ mod parsing {
         Ok((input, Case{
             map: MapSize {rows, cols},
             warehouses: case_warehouses,
+            products: case_products,
             total_turns: turns,
             number_of_drones: drones,
             max_payload,
@@ -221,7 +274,7 @@ mod parsing {
                let (input, (warehouse_id, product_id, number_of_items)) = tuple((
                    decimal_number_ms::<WarehouseID>,
                    decimal_number_ms::<ProductID>,
-                   decimal_number_ms::<u32>,
+                   decimal_number_ms::<WarehouseProductInventory>,
                ))(input)?;
                Ok((input, Command::Load {
                    drone_id,
@@ -234,7 +287,7 @@ mod parsing {
                 let (input, (warehouse_id, product_id, number_of_items)) = tuple((
                     decimal_number_ms::<WarehouseID>,
                     decimal_number_ms::<ProductID>,
-                    decimal_number_ms::<u32>,
+                    decimal_number_ms::<WarehouseID>,
                 ))(input)?;
                 Ok((input, Command::Unload {
                     drone_id,
@@ -248,7 +301,7 @@ mod parsing {
                 let (input, (order_id, product_id, number_of_items)) = tuple((
                     decimal_number_ms::<OrderID>,
                     decimal_number_ms::<ProductID>,
-                    decimal_number_ms::<u32>,
+                    decimal_number_ms::<WarehouseID>,
                 ))(input)?;
 
                 Ok((input, Command::Deliver {
@@ -328,11 +381,28 @@ mod parsing {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 struct Warehouse {
     pub id: WarehouseID,
     pub location: Location,
-    pub inventory: Vec<WarehouseProductInventory>,
+    pub inventory: Vec<ProductID>,
+}
+
+impl Warehouse {
+    pub fn take_out_product(&mut self, product_id: ProductID, number_of_products: WarehouseProductInventory) -> Result<(), Qual2016ScoringError> {
+        let inv = self.inventory.get_mut(product_id as usize)
+            .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
+        if *inv >= number_of_products {
+            *inv -= number_of_products;
+            Ok(())
+        } else {
+            Err(Qual2016ScoringError::OverTakingWarehouse {warehouse_id: self.id})
+        }
+    }
+
+    pub fn insert_product(&mut self, prod_id: ProductID, number_of_products: WarehouseProductInventory) {
+        self.inventory[prod_id as usize] += number_of_products;
+    }
 }
 
 pub struct Case {
@@ -341,7 +411,8 @@ pub struct Case {
     total_turns: Turn,
     number_of_drones: DroneID,
     max_payload: Weight,
-    orders: Vec<Order>
+    orders: Vec<Order>,
+    products: Vec<Product>
 }
 
 impl Case {
@@ -363,19 +434,87 @@ lazy_static!{
                                         unwrap();
 }
 
+#[derive(Debug)]
+struct ExecutedCommand {
+    command: Command,
+    command_started: Turn,
+}
+
+use std::collections::VecDeque;
 struct Drone {
     id: DroneID,
-    to_execute: Vec<Command>,
-    curr_command: Option<Command>
+    to_execute: VecDeque<Command>,
+    curr_command: Option<ExecutedCommand>,
+    location: Location,
+    carrying: Vec<Product>,
+    weight_limit: Weight
 }
 
 impl Drone {
-    pub fn new(id: DroneID) -> Self {
+    pub fn new(id: DroneID, location: Location, weight_limit: Weight) -> Self {
         Self{
             id,
-            to_execute: Vec::new(),
-            curr_command: None
+            to_execute: VecDeque::new(),
+            curr_command: None,
+            location,
+            weight_limit,
+            carrying: Vec::new()
         }
+    }
+
+    pub fn load(&mut self, product: Product, number_of_products: WarehouseProductInventory) -> Result<(), Qual2016ScoringError> {
+        if self.carrying.iter().map(|p| p.weight).sum::<Weight>() + number_of_products * product.weight > self.weight_limit {
+            Err(Qual2016ScoringError::DronePassedWeightLimit {drone_id: self.id})
+        } else {
+            for _ in 0..number_of_products { self.carrying.push(product.clone())};
+            Ok(())
+        }
+    }
+
+    pub fn unload(&mut self, product_id: ProductID, number_of_products: WarehouseProductInventory) -> Result<(), Qual2016ScoringError> {
+        let indices_of_product = self.carrying.iter().enumerate()
+            .fold(Vec::new(), |mut s, (i, p)| {
+                if p.id == product_id {
+                    s.push(i);
+                }
+                s
+            });
+
+        if indices_of_product.len() < number_of_products as usize {
+            Err(Qual2016ScoringError::OverTakingDrone {drone_id: self.id})
+        } else {
+            for i in indices_of_product.into_iter().take(number_of_products as usize) {
+                self.carrying.remove(i);
+            }
+            Ok(())
+        }
+    }
+
+}
+
+#[derive(Debug)]
+pub enum Command {
+    Load {
+        drone_id: DroneID,
+        warehouse_id: WarehouseID,
+        product_id: ProductID,
+        number_of_items: WarehouseProductInventory
+    },
+    Unload {
+        drone_id: DroneID,
+        warehouse_id: WarehouseID,
+        product_id: ProductID,
+        number_of_items: WarehouseProductInventory
+    },
+    Deliver {
+        drone_id: DroneID,
+        order_id: OrderID,
+        product_id: ProductID,
+        number_of_items: WarehouseProductInventory
+    },
+    Wait {
+        drone_id: DroneID,
+        turns: Turn
     }
 }
 
@@ -389,7 +528,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
     };
 
     let mut drones: Vec<Drone> = (0..case.number_of_drones).into_iter()
-        .map(|i| Drone::new(i))
+        .map(|i| Drone::new(i, case.warehouses[0].location, case.max_payload))
         .collect();
 
     let commands: Vec<Command> = parsing::parse_submission(submission)
@@ -400,7 +539,102 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         let drone_id = command.get_drone_id();
         let drone: &mut Drone = drones.get_mut(drone_id as usize)
             .ok_or(Qual2016ScoringError::CommandIssuedToUnknownDrone {drone_id})?;
-        drone.to_execute.push(command);
+        drone.to_execute.push_back(command);
     }
-   Ok(0)
+
+    // initialize first command
+    for drone in &mut drones {
+        if let Some(first_command) = drone.to_execute.pop_front() {
+            drone.curr_command = Some(ExecutedCommand {
+                command: first_command,
+                command_started: 0});
+        }
+    }
+
+    let mut warehouses = case.warehouses.clone();
+    let mut orders = case.orders.clone();
+    let mut score: Score = 0;
+    for t in 0..case.total_turns {
+        //TODO: select order of commands - unload before load
+        for drone in &mut drones {
+            let mut finished_command = false;
+            if let Some(ref curr_command) = drone.curr_command {
+
+                match curr_command.command {
+                    Command::Load { warehouse_id, product_id, number_of_items , ..} => {
+                        let from_warehouse = warehouses.get_mut(warehouse_id as usize)
+                            .ok_or(Qual2016ScoringError::UnknownWarehouse {warehouse_id})?;
+
+                        let command_duration = (drone.location.flight_time(&from_warehouse.location)) + 1;
+                        let end_time = (curr_command.command_started + command_duration);
+
+                        if t == end_time {
+                            drone.location = from_warehouse.location.clone();
+                            let product = case.products.get(product_id as usize)
+                                .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
+                            from_warehouse.take_out_product(product_id, number_of_items)?;
+                            drone.load(product.clone(), number_of_items)?;
+                            finished_command = true;
+                        }
+
+                    },
+                    Command::Unload { warehouse_id, product_id, number_of_items , ..} => {
+                        let to_warehouse = warehouses.get_mut(warehouse_id as usize)
+                            .ok_or(Qual2016ScoringError::UnknownWarehouse {warehouse_id})?;
+
+                        let command_duration = drone.location.flight_time(&to_warehouse.location) + 1;
+                        let end_time = curr_command.command_started + command_duration;
+
+                        if t == end_time {
+                            drone.location = to_warehouse.location.clone();
+                            let product = case.products.get(product_id as usize)
+                                .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
+
+                            drone.unload(product.id, number_of_items)?;
+                            to_warehouse.insert_product(product.id, number_of_items);
+                            finished_command = true;
+                        }
+
+                    },
+                    Command::Deliver { order_id, product_id, number_of_items, .. } => {
+                        let to_order = orders.get_mut(order_id as usize)
+                            .ok_or(Qual2016ScoringError::UnknownOrder {order_id})?;
+                        let command_duration = drone.location.flight_time(&to_order.location) + 1;
+                        let end_time = curr_command.command_started + command_duration;
+
+
+                        if t == end_time {
+                            drone.location = to_order.location.clone();
+                            let product = case.products.get(product_id as usize)
+                                .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
+                            drone.unload(product.id, number_of_items)?;
+                            to_order.supply(product_id, number_of_items)?;
+
+                            if to_order.is_done() {
+                                score += (((case.total_turns - (t-1)) as f32)/(case.total_turns as f32) * 100f32).ceil() as Score;
+                            }
+
+                            finished_command = true;
+                        }
+                    },
+                    Command::Wait { turns, .. } => {
+                        let end_time = curr_command.command_started + turns;
+
+                        if t == end_time {
+                            finished_command = true;
+                        }
+
+                    },
+                }
+            }
+            if finished_command {
+                drone.curr_command = drone.to_execute.pop_front()
+                    .map(|c| ExecutedCommand{ command: c, command_started: t });
+            }
+
+        }
+
+    }
+
+   Ok(score)
 }
