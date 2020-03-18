@@ -67,6 +67,16 @@ pub fn get_challenges() -> Vec<Challenge> {
             ],
             score_function: Box::new(crate::qual2020::score),
             date: ChallengeDate::Qualification(2020)
+        },
+
+        Challenge{
+            input_file_names: vec![
+                "busy_day".into(),
+                "mother_of_all_warehouses".into(),
+                "redundancy".into(),
+            ],
+            score_function: Box::new(crate::qual2016::score),
+            date: ChallengeDate::Qualification(2016)
         }
     ]
 }
