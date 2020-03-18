@@ -6,6 +6,7 @@ var submission_structure_per_challenge = {
         "files": ["a", "b", "c", "d", "e", "f"],
         "pdf_file": "hashcode_2020_online_qualification_round.pdf",
         "in_files": "qualification_round_2020.in.zip",
+        "scoreboard": "/scoreboard/qual2020"
 
     },
     "qualification-2016": {
@@ -15,6 +16,7 @@ var submission_structure_per_challenge = {
         "files": ["busy_day", "mother_of_all_warehouses", "redundancy"],
         "pdf_file": "hashcode2016_qualification_task.pdf",
         "in_files": "qualification_round_2016.in.zip",
+        "scoreboard": "/scoreboard/qual2016"
     },
 }
 
@@ -34,9 +36,9 @@ window.setInterval(load_scoreboard, 10000);
 
 function load_scoreboard() {
     var scoreboard = $("#scoreboard-table");
-    scoreboard.empty();
+    var scoreboard_url = submission_structure_per_challenge[$("#challenge-select")[0].value].scoreboard;
     $.ajax({
-        url:'scoreboard',
+        url: scoreboard_url,
         type:'GET',
         success:function(res){
             var scores = new Array();
@@ -48,6 +50,7 @@ function load_scoreboard() {
 
             scores.sort(function(a,b) { return b.score - a.score});
 
+            scoreboard.empty();
             scoreboard.append("<thead><tr><th>#</th><th>Team Name</th><th>Total Score</th></tr><thead>");
             for (var i=0; i<scores.length; i++) {
                 var team_score = scores[i];
@@ -101,6 +104,8 @@ function change_challenge() {
     $("#download-links").append(
         "<a href='" + sub_structure.in_files + "'>Input files</a>"
     );
+
+    load_scoreboard();
 }
 
 function submit_files() {
