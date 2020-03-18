@@ -555,7 +555,51 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
     let mut orders = case.orders.clone();
     let mut score: Score = 0;
     for t in 0..case.total_turns {
-        //TODO: select order of commands - unload before load
+
+        // This is a shitty way to do load and unload order - works thanks to t dependency
+        // Do unload
+        for drone in &mut drones {
+            let mut finished_command = false;
+            if let Some(ref curr_command) = drone.curr_command {
+
+                match curr_command.command {
+                    Command::Load { warehouse_id, product_id, number_of_items , ..} => {
+                        // Will do later
+                    },
+                    Command::Unload { warehouse_id, product_id, number_of_items , ..} => {
+                        let to_warehouse = warehouses.get_mut(warehouse_id as usize)
+                            .ok_or(Qual2016ScoringError::UnknownWarehouse {warehouse_id})?;
+
+                        let command_duration = drone.location.flight_time(&to_warehouse.location) + 1;
+                        let end_time = curr_command.command_started + command_duration;
+
+                        if t == end_time {
+                            drone.location = to_warehouse.location.clone();
+                            let product = case.products.get(product_id as usize)
+                                .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
+
+                            drone.unload(product.id, number_of_items)?;
+                            to_warehouse.insert_product(product.id, number_of_items);
+                            finished_command = true;
+                        }
+
+                    },
+                    Command::Deliver { order_id, product_id, number_of_items, .. } => {
+                        // Will do later
+                    },
+                    Command::Wait { turns, .. } => {
+                        // Will do later
+                    },
+                }
+            }
+            if finished_command {
+                drone.curr_command = drone.to_execute.pop_front()
+                    .map(|c| ExecutedCommand{ command: c, command_started: t });
+            }
+
+        }
+
+        // Do load, deliver, wait
         for drone in &mut drones {
             let mut finished_command = false;
             if let Some(ref curr_command) = drone.curr_command {
@@ -579,22 +623,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
 
                     },
                     Command::Unload { warehouse_id, product_id, number_of_items , ..} => {
-                        let to_warehouse = warehouses.get_mut(warehouse_id as usize)
-                            .ok_or(Qual2016ScoringError::UnknownWarehouse {warehouse_id})?;
-
-                        let command_duration = drone.location.flight_time(&to_warehouse.location) + 1;
-                        let end_time = curr_command.command_started + command_duration;
-
-                        if t == end_time {
-                            drone.location = to_warehouse.location.clone();
-                            let product = case.products.get(product_id as usize)
-                                .ok_or(Qual2016ScoringError::UnknownProduct {product_id})?;
-
-                            drone.unload(product.id, number_of_items)?;
-                            to_warehouse.insert_product(product.id, number_of_items);
-                            finished_command = true;
-                        }
-
+                        // Done before
                     },
                     Command::Deliver { order_id, product_id, number_of_items, .. } => {
                         let to_order = orders.get_mut(order_id as usize)
@@ -633,7 +662,6 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
             }
 
         }
-
     }
 
    Ok(score)
