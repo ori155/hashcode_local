@@ -13,7 +13,7 @@ var submission_structure_per_challenge = {
         "challenge" : {
             "Qualification": 2016
         },
-        "files": ["busy_day", "mother_of_all_warehouses", "redundancy"],
+        "files": ["example", "busy_day", "mother_of_all_warehouses", "redundancy"],
         "pdf_file": "hashcode2016_qualification_task.pdf",
         "in_files": "qualification_round_2016.in.zip",
         "scoreboard": "/scoreboard/qual2016"

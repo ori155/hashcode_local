@@ -54,6 +54,13 @@ pub struct Challenge {
     pub date: ChallengeDate,
 }
 
+use std::fmt;
+impl fmt::Debug for Challenge {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "date: {:?}, input_file_names: {:?}", self.date, self.input_file_names)
+    }
+}
+
 pub fn get_challenges() -> Vec<Challenge> {
     vec![
         Challenge{
@@ -71,6 +78,7 @@ pub fn get_challenges() -> Vec<Challenge> {
 
         Challenge{
             input_file_names: vec![
+                "example".into(),
                 "busy_day".into(),
                 "mother_of_all_warehouses".into(),
                 "redundancy".into(),
