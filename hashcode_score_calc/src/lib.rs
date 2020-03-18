@@ -42,7 +42,7 @@ impl std::convert::From<&str> for InputFileName {
 pub type Score = u64;
 pub type Year = u32;
 
-#[derive(Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChallengeDate {
     Qualification(Year),
     Final(Year),

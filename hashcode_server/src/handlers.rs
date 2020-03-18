@@ -4,7 +4,7 @@ use crate::{sign_on_team_name, AccessGranted, TeamToken};
 use hex_string::HexString;
 use crate::scoreboard::ScoreBoard;
 use std::collections::HashMap;
-use crate::models::solution::{Solution, InputFileName};
+use crate::models::solution::{Solution, InputFileName, ChallengeDate};
 
 pub async fn add_team(
     new_team: Team,
@@ -66,17 +66,17 @@ pub async fn submit_solution(team_accessed: AccessGranted, challenges: Arc<Vec<C
     };
 
     for (input_file_name, score) in &new_scores {
-        scoreboard.add_team_score(&team_accessed.team, input_file_name, *score).await;
+        scoreboard.add_team_score(&team_accessed.team, input_file_name, *score, solution.challenge.clone()).await;
     }
 
     Ok(warp::reply::json(&new_scores))
 }
 
-pub async fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
+pub async fn view_scoreboard(challenge_date: ChallengeDate, scoreboard: ScoreBoard, teams: TeamsDb) -> Result<impl warp::Reply, std::convert::Infallible> {
 
     let mut score_view = HashMap::new();
     for tn in teams.list_team_names().await {
-        let best_score_of_team = scoreboard.total_score(&tn).await;
+        let best_score_of_team = scoreboard.total_score(&tn, challenge_date.clone()).await;
         score_view.insert(tn, best_score_of_team);
     }
 

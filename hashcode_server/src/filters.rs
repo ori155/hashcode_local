@@ -6,6 +6,8 @@ use warp::Filter;
 use crate::scoreboard::ScoreBoard;
 use hashcode_score_calc::Challenge;
 use std::sync::Arc;
+use crate::models::solution::ChallengeDate;
+use crate::handlers::UnknownChallenge;
 
 fn with_db(
     db: TeamsDb,
@@ -62,10 +64,26 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
         .and_then(crate::handlers::submit_solution)
 }
 
+
+//TODO: This is a quick and dirty hack
+pub fn challenge_data_from_path() -> impl Filter<Extract = (ChallengeDate,), Error = warp::Rejection> + Clone
+{
+    async fn handle(s: String) -> Result<ChallengeDate, warp::Rejection> {
+        match s.as_str() {
+            "qual2020" => Ok(ChallengeDate::Qualification(2020)),
+            "qual2016" => Ok(ChallengeDate::Qualification(2016)),
+            _ => Err(warp::reject::custom(UnknownChallenge))
+        }
+    }
+        warp::path::param::<String>()
+       .and_then(handle)
+}
+
 pub fn view_scoreboard(scoreboard: ScoreBoard, teams: TeamsDb) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
 {
     warp::get()
         .and(warp::path::path("scoreboard"))
+        .and(challenge_data_from_path())
         .and(with_scoreboard(scoreboard))
         .and(with_db(teams))
         .and_then(crate::handlers::view_scoreboard)
