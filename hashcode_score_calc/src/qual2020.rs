@@ -28,9 +28,9 @@ pub enum Qual2020ScoringError {
     #[error("You're trying to register more libraries than exist in this case")]
     TooManyLibraries,
     #[error("You're trying to scan a book that doesn't exist in the library")]
-    LibraryDoesntContainBook,
+    LibraryDoesntContainBook{libid: LibraryID, bookid: BookID},
     #[error("You're trying to sign up a library that doesn't exist")]
-    NonExistLibrary
+    NonExistLibrary{libid: LibraryID}
 
 }
 
@@ -213,10 +213,10 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<u64, ScoringError
 
     for library_signup in &submission.libraries_to_signup {
         let lib_id = library_signup.id;
-        let library: &Library = case.libraries.get(lib_id as usize).ok_or(NonExistLibrary)?;
+        let library: &Library = case.libraries.get(lib_id as usize).ok_or(NonExistLibrary{libid:lib_id})?;
 
-        if library_signup.books_to_scan.iter().any(|book| !library.books.contains(book)) {
-            return Err(LibraryDoesntContainBook.into())
+        if let Some(unfound_book_id) = library_signup.books_to_scan.iter().find(|book| !library.books.contains(book)) {
+            return Err(LibraryDoesntContainBook{ libid: lib_id, bookid: *unfound_book_id }.into())
         }
     }
 

@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 pub mod qual2020;
+pub mod qual2016;
 
 use thiserror::Error;
 use std::fmt::Display;
@@ -18,7 +19,9 @@ pub enum ScoringError {
     #[error("Challenge Specific: {0}")]
     ChallengeSpecific(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>),
     #[error("Error parsing the input file: {0}")]
-    InputFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>)
+    InputFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>),
+    #[error("Error parsing the submission file: {0}")]
+    SubmissionFileError(Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>)
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone, Hash, Serialize, Deserialize)]
@@ -39,7 +42,7 @@ impl std::convert::From<&str> for InputFileName {
 pub type Score = u64;
 pub type Year = u32;
 
-#[derive(Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChallengeDate {
     Qualification(Year),
     Final(Year),
@@ -49,6 +52,13 @@ pub struct Challenge {
     pub input_file_names: Vec<InputFileName>,
     pub score_function: Box<dyn Fn(&str, &InputFileName) -> Result<Score, ScoringError> + 'static + Send + Sync>,
     pub date: ChallengeDate,
+}
+
+use std::fmt;
+impl fmt::Debug for Challenge {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "date: {:?}, input_file_names: {:?}", self.date, self.input_file_names)
+    }
 }
 
 pub fn get_challenges() -> Vec<Challenge> {
@@ -64,6 +74,17 @@ pub fn get_challenges() -> Vec<Challenge> {
             ],
             score_function: Box::new(crate::qual2020::score),
             date: ChallengeDate::Qualification(2020)
+        },
+
+        Challenge{
+            input_file_names: vec![
+                "example".into(),
+                "busy_day".into(),
+                "mother_of_all_warehouses".into(),
+                "redundancy".into(),
+            ],
+            score_function: Box::new(crate::qual2016::score),
+            date: ChallengeDate::Qualification(2016)
         }
     ]
 }

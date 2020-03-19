@@ -146,6 +146,7 @@ mod tests {
 
         let teams_db = TeamsDb::new();
         let scoreboard = ScoreBoard::new();
+        let challenge = ChallengeDate::Qualification(2020);
 
         let api = crate::filters::game_api(teams_db.clone(), scoreboard.clone());
 
@@ -201,7 +202,7 @@ mod tests {
         );
         assert_eq!(res.body(), "{\"a\":16}");
 
-        assert_eq!(scoreboard.total_score(&new_team.name).await,
+        assert_eq!(scoreboard.total_score(&new_team.name, challenge).await,
         16,
         "The example should score 16 points");
     }
@@ -219,7 +220,7 @@ mod tests {
 
         let empty_scoreboard = {
             let res = warp::test::request()
-                .path("/scoreboard")
+                .path("/scoreboard/qual2020")
                 .method("GET")
                 .reply(&api)
                 .await;
@@ -295,7 +296,7 @@ mod tests {
 
         let score = {
             let res = warp::test::request()
-                .path("/scoreboard")
+                .path("/scoreboard/qual2020")
                 .method("GET")
                 .reply(&api)
                 .await;
@@ -310,6 +311,26 @@ mod tests {
         };
 
         assert_eq!(score[&new_team.name], 16);
+
+
+
+        let score_for_different_challenge = {
+            let res = warp::test::request()
+                .path("/scoreboard/qual2016")
+                .method("GET")
+                .reply(&api)
+                .await;
+
+            assert_eq!(
+                res.status(),
+                http::StatusCode::OK,
+                "Couldn't retrieve scoreboard"
+            );
+
+            serde_json::from_slice::<HashMap<TeamName, Score>>(res.body()).expect("Should be a json")
+        };
+
+        assert_eq!(score_for_different_challenge[&new_team.name], 0)
 
     }
 }
