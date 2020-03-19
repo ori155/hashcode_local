@@ -1,5 +1,13 @@
 FROM rust:1.42 AS builder
 WORKDIR /usr/src/myapp
+
+COPY Cargo.toml .
+COPY Cargo.lock .
+COPY ./hashcode_score_calc/Cargo.toml ./hashcode_score_calc/Cargo.toml
+COPY ./hashcode_server/Cargo.toml ./hashcode_server/Cargo.toml
+
+RUN cargo fetch
+
 COPY . .
 RUN cargo build --release
 

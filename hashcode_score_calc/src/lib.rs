@@ -76,6 +76,7 @@ pub fn get_challenges() -> Vec<Challenge> {
             date: ChallengeDate::Qualification(2020)
         },
 
+
         Challenge{
             input_file_names: vec![
                 "example".into(),
