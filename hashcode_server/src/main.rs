@@ -151,7 +151,7 @@ mod tests {
         let api = crate::filters::game_api(teams_db.clone(), scoreboard.clone());
 
         let new_team = Team {
-            name: "first_team".into(),
+            name: "first team בעברית".into(),
             participants: vec!["ori".to_owned()],
         };
 
