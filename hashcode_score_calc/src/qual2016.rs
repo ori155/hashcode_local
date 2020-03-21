@@ -561,7 +561,6 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         for drone in &mut drones {
             let mut finished_command = false;
             if let Some(ref curr_command) = drone.curr_command {
-                println!("t={}, drone_curr_command: {:?}, carrying: {:?}", t, curr_command, &drone.carrying);
 
                 match curr_command.command {
                     Command::Load { warehouse_id, product_id, number_of_items , ..} => {
