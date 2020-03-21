@@ -11,8 +11,8 @@ pub enum Qual2020ScoringError {
     MissingLibraryId,
     #[error("Wrong library id format")]
     WrongFormatLibraryId,
-    #[error("Expected the number of books at library signup")]
-    MissingNumOfBooksForLibrarySignup,
+    #[error("Expected the number of books at library signup, for library id {library_id}")]
+    MissingNumOfBooksForLibrarySignup{library_id: LibraryID},
     #[error("Wrong format of number of books at library signup")]
     WrongFormatNumOfBooks,
     #[error("Wrong format of book id at library signup")]
@@ -69,7 +69,7 @@ impl LibrarySignup {
             .map_err(|_| WrongFormatLibraryId)?;
 
         let num_of_books = id_and_num_of_books.next()
-            .ok_or(MissingNumOfBooksForLibrarySignup)?
+            .ok_or(MissingNumOfBooksForLibrarySignup{library_id})?
             .parse::<u32>()
             .map_err(|_| WrongFormatNumOfBooks)?;
 
