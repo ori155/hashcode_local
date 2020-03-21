@@ -1,10 +1,10 @@
 use crate::teams_db::TeamsDb;
 use crate::models::{TeamName, Team};
-use crate::{sign_on_team_name, AccessGranted, TeamToken};
+use crate::{sign_on_team_name, AccessGranted, TeamToken, verify_team_token};
 use hex_string::HexString;
 use crate::scoreboard::ScoreBoard;
 use std::collections::HashMap;
-use crate::models::solution::{Solution, InputFileName, ChallengeDate};
+use crate::models::solution::{Solution, InputFileName, ChallengeDate, SolutionSubmitRequest};
 
 pub async fn add_team(
     new_team: Team,
@@ -31,6 +31,10 @@ pub struct UnknownInputCase;
 impl warp::reject::Reject for UnknownInputCase {}
 
 #[derive(Debug)]
+pub struct WrongToken;
+impl warp::reject::Reject for WrongToken {}
+
+#[derive(Debug)]
 pub struct UnknownChallenge;
 impl warp::reject::Reject for UnknownChallenge {}
 
@@ -41,8 +45,14 @@ impl warp::reject::Reject for BadSubmissionFormat {}
 use hashcode_score_calc::Challenge;
 use std::sync::Arc;
 
-pub async fn submit_solution(team_accessed: AccessGranted, challenges: Arc<Vec<Challenge>>, mut scoreboard: ScoreBoard, solution: Solution) -> Result<impl warp::Reply, warp::Rejection> {
+pub async fn submit_solution(solution_req: SolutionSubmitRequest, challenges: Arc<Vec<Challenge>>, mut scoreboard: ScoreBoard) -> Result<impl warp::Reply, warp::Rejection> {
     use hashcode_score_calc::Score;
+
+    if !verify_team_token(&solution_req.token.into(), &solution_req.team_name) {
+        return Err(warp::reject::custom(WrongToken));
+    }
+
+    let SolutionSubmitRequest{solution, team_name, ..} = solution_req;
 
     let new_scores = {
 
@@ -66,7 +76,7 @@ pub async fn submit_solution(team_accessed: AccessGranted, challenges: Arc<Vec<C
     };
 
     for (input_file_name, score) in &new_scores {
-        scoreboard.add_team_score(&team_accessed.team, input_file_name, *score, solution.challenge.clone()).await;
+        scoreboard.add_team_score(&team_name, input_file_name, *score, solution.challenge.clone()).await;
     }
 
     Ok(warp::reply::json(&new_scores))
