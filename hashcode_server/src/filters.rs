@@ -48,19 +48,13 @@ pub fn list_teams(
         .and_then(crate::handlers::list_teams)
 }
 
-pub fn team_access() -> impl Filter<Extract = (AccessGranted,), Error = warp::Rejection> + Clone {
-    //Todo: test team exists - key is random so Token is hard to forge
-    warp::path!("team" / TeamName / HexString / ..).and_then(crate::handlers::test_team_token)
-}
-
 pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
 {
     warp::post()
-        .and(team_access())
+        .and(warp::body::json())
         .and(warp::path::path("submit"))
         .and(with_challenges(hashcode_score_calc::get_challenges()))
         .and(with_scoreboard(scoreboard))
-        .and(warp::body::json())
         .and_then(crate::handlers::submit_solution)
 }
 

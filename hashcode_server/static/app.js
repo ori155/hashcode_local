@@ -130,20 +130,24 @@ function submit_files() {
     }
     Promise.all(sol_array).then(function(fs) {
         var sol = {
-            "challenge": sub_structure.challenge,
-            "solutions": {}
+            "team_name": team_name,
+            "token": token,
+            "solution": {
+                "challenge": sub_structure.challenge,
+                "solutions": {}
+            }
         };
 
         for (var i=0; i<sub_structure.files.length; i++) {
             if (fs[i] != null) {
-                sol.solutions[sub_structure.files[i]] = fs[i];
+                sol.solution.solutions[sub_structure.files[i]] = fs[i];
             }
         }
 
         console.log(sol);
 
         $.ajax({
-            url:'team/'+team_name+'/'+token+'/submit',
+            url:'/submit',
             type:'POST',
             data: JSON.stringify(sol),
             dataType: 'json',
