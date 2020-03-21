@@ -9,15 +9,15 @@ var submission_structure_per_challenge = {
         "scoreboard": "/scoreboard/qual2020"
 
     },
-//    "qualification-2016": {
-//        "challenge" : {
-//            "Qualification": 2016
-//        },
-//        "files": ["example", "busy_day", "mother_of_all_warehouses", "redundancy"],
-//        "pdf_file": "hashcode2016_qualification_task.pdf",
-//        "in_files": "qualification_round_2016.in.zip",
-//        "scoreboard": "/scoreboard/qual2016"
-//    },
+    "qualification-2016": {
+        "challenge" : {
+            "Qualification": 2016
+        },
+        "files": ["example", "busy_day", "mother_of_all_warehouses", "redundancy"],
+        "pdf_file": "hashcode2016_qualification_task.pdf",
+        "in_files": "qualification_round_2016.in.zip",
+        "scoreboard": "/scoreboard/qual2016"
+    },
 }
 
 $(document).ready( function() {
