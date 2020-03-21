@@ -96,7 +96,7 @@ async fn main() {
 mod tests {
     use crate::teams_db::TeamsDb;
     use crate::{Team, TeamToken};
-    use crate::models::solution::{Solution, ChallengeDate};
+    use crate::models::solution::{Solution, ChallengeDate, SolutionSubmitRequest};
     use std::collections::HashMap;
     use crate::models::TeamName;
     use crate::scoreboard::Score;
@@ -170,26 +170,26 @@ mod tests {
         let team_token: TeamToken =
             serde_json::from_slice(res.body()).expect("should receive token");
 
-        let submit_path = format!(
-            "/team/{}/{}/submit",
-            new_team.name,
-            HexString::from_bytes(&team_token.token).as_str()
-        );
+        let submit_path = "/submit";
 
-        let solution = Solution {
-            challenge: ChallengeDate::Qualification(2020),
-            solutions: {
-                let mut h = HashMap::new();
-                h.insert("a".into(),
-                         include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
-                h
-            }
+        let solution_submit = SolutionSubmitRequest {
+            solution: Solution {
+                challenge: ChallengeDate::Qualification(2020),
+                solutions: {
+                        let mut h = HashMap::new();
+                        h.insert("a".into(),
+                                 include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
+                        h
+                    }
+                },
+            team_name: new_team.name.clone(),
+            token: HexString::from_bytes(&team_token.token)
         };
 
         let res = warp::test::request()
             .method("POST")
             .path(&submit_path)
-            .json(&solution)
+            .json(&solution_submit)
             .reply(&api)
             .await;
 
@@ -262,26 +262,26 @@ mod tests {
         let team_token: TeamToken =
             serde_json::from_slice(res.body()).expect("should receive token");
 
-        let submit_path = format!(
-            "/team/{}/{}/submit",
-            new_team.name,
-            HexString::from_bytes(&team_token.token).as_str()
-        );
+        let submit_path = "/submit";
 
-        let solution = Solution {
-            challenge: ChallengeDate::Qualification(2020),
-            solutions: {
-                let mut h = HashMap::new();
-                h.insert("a".into(),
-                         include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
-                h
-            }
+        let solution_submit = SolutionSubmitRequest {
+            solution: Solution {
+                challenge: ChallengeDate::Qualification(2020),
+                solutions: {
+                    let mut h = HashMap::new();
+                    h.insert("a".into(),
+                             include_str!("../../hashcode_score_calc/assets/2020qual/submissions/example_submission.txt").to_owned());
+                    h
+                }
+            },
+            team_name: new_team.name.clone(),
+            token: HexString::from_bytes(&team_token.token)
         };
 
         let res = warp::test::request()
             .method("POST")
             .path(&submit_path)
-            .json(&solution)
+            .json(&solution_submit)
             .reply(&api)
             .await;
 
