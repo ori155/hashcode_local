@@ -56,6 +56,7 @@ pub fn submit_solution(scoreboard: ScoreBoard) -> impl Filter<Extract = impl war
         .and(with_challenges(hashcode_score_calc::get_challenges()))
         .and(with_scoreboard(scoreboard))
         .and_then(crate::handlers::submit_solution)
+        .recover(crate::handlers::handle_submit_rejection)
 }
 
 

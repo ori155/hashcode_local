@@ -39,8 +39,8 @@ pub struct UnknownChallenge;
 impl warp::reject::Reject for UnknownChallenge {}
 
 #[derive(Debug)]
-pub struct BadSubmissionFormat(hashcode_score_calc::ScoringError);
-impl warp::reject::Reject for BadSubmissionFormat {}
+pub struct BadSubmission(hashcode_score_calc::ScoringError);
+impl warp::reject::Reject for BadSubmission {}
 
 use hashcode_score_calc::Challenge;
 use std::sync::Arc;
@@ -68,7 +68,7 @@ pub async fn submit_solution(solution_req: SolutionSubmitRequest, challenges: Ar
             };
 
             let score = (relevant_challenge.score_function)(submission, input_file_name)
-                .map_err(|e| warp::reject::custom(BadSubmissionFormat(e)))?;
+                .map_err(|e| warp::reject::custom(BadSubmission(e)))?;
 
             new_scores.insert(input_file_name.clone(), score);
         }
@@ -91,6 +91,17 @@ pub async fn view_scoreboard(challenge_date: ChallengeDate, scoreboard: ScoreBoa
     }
 
     Ok(warp::reply::json(&score_view))
+}
+
+pub async fn handle_submit_rejection(rej: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
+
+    if let Some(UnknownChallenge) = rej.find() {
+        Ok("It seems like you're trying to play an unimplemented game".to_owned())
+    } else  if let Some(BadSubmission(scoring_err)) = rej.find() {
+        Ok(format!("{}", scoring_err))
+    } else {
+        Err(rej)
+    }
 }
 
 pub async fn test_team_token(
