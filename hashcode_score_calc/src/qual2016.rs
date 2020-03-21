@@ -83,15 +83,6 @@ mod tests {
     }
 }
 
-impl MapSize {
-    pub fn loc(&self, row: Row, col: Col) -> Result<Location, Qual2016ScoringError> {
-        if row < self.rows && col < self.cols {
-            Ok(Location{ row, col })
-        } else {
-            Err(Qual2016ScoringError::LocationOutOfMap { row, col })
-        }
-    }
-}
 
 #[derive(Clone)]
 struct Product {
@@ -255,7 +246,7 @@ mod parsing {
         let (input, case_orders) = orders(input)?;
 
         Ok((input, Case{
-            map: MapSize {rows, cols},
+            _map: MapSize {rows, cols},
             warehouses: case_warehouses,
             products: case_products,
             total_turns: turns,
@@ -406,7 +397,7 @@ impl Warehouse {
 }
 
 pub struct Case {
-    map: MapSize,
+    _map: MapSize,
     warehouses: Vec<Warehouse>,
     total_turns: Turn,
     number_of_drones: DroneID,
@@ -622,7 +613,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
                         }
 
                     },
-                    Command::Unload { warehouse_id, product_id, number_of_items , ..} => {
+                    Command::Unload {..} => {
                         // Done before
                     },
                     Command::Deliver { order_id, product_id, number_of_items, .. } => {

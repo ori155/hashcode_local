@@ -11,7 +11,6 @@ mod models;
 mod teams_db;
 mod scoreboard;
 
-use models::team::Team;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum ApiError {

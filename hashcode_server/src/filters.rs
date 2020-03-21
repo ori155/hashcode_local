@@ -1,7 +1,4 @@
-use crate::models::TeamName;
 use crate::teams_db::TeamsDb;
-use crate::AccessGranted;
-use hex_string::HexString;
 use warp::Filter;
 use crate::scoreboard::ScoreBoard;
 use hashcode_score_calc::Challenge;

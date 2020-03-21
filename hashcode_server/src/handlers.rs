@@ -1,10 +1,9 @@
 use crate::teams_db::TeamsDb;
 use crate::models::{TeamName, Team};
-use crate::{sign_on_team_name, AccessGranted, TeamToken, verify_team_token};
-use hex_string::HexString;
+use crate::{sign_on_team_name, verify_team_token};
 use crate::scoreboard::ScoreBoard;
 use std::collections::HashMap;
-use crate::models::solution::{Solution, InputFileName, ChallengeDate, SolutionSubmitRequest};
+use crate::models::solution::{InputFileName, ChallengeDate, SolutionSubmitRequest};
 
 pub async fn add_team(
     new_team: Team,
@@ -104,15 +103,3 @@ pub async fn handle_submit_rejection(rej: warp::Rejection) -> Result<impl warp::
     }
 }
 
-pub async fn test_team_token(
-    team_name: TeamName,
-    team_token: HexString,
-) -> Result<AccessGranted, warp::Rejection> {
-    let team_token: TeamToken = team_token.into();
-
-    if crate::verify_team_token(&team_token, &team_name) {
-        Ok(AccessGranted { team: team_name })
-    } else {
-        Err(warp::reject::custom(crate::ApiError::WrongToken))
-    }
-}
