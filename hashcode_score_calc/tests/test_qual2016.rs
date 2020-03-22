@@ -10,6 +10,48 @@ fn example_input() {
 }
 
 #[test]
+fn busy_day_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/busy_day.100439.out");
+
+    assert_eq!(qual2016::score(submission, &"busy_day".into()).expect("Should succeed"), 100439);
+}
+
+#[test]
+fn mother_of_all_warehouses_solo_single_delivery_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/mother_of_all_warehouses.100.out");
+
+    assert_eq!(qual2016::score(submission, &"mother_of_all_warehouses".into()).expect("Should succeed"), 100);
+}
+
+#[test]
+fn mother_of_all_warehouses_double_drone_single_delivery_each_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/mother_of_all_warehouses.200.out");
+
+    assert_eq!(qual2016::score(submission, &"mother_of_all_warehouses".into()).expect("Should succeed"), 200);
+}
+
+#[test]
+fn mother_of_all_warehouses_multiple_deliveries_per_drone_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/mother_of_all_warehouses.2100.out");
+
+    assert_eq!(qual2016::score(submission, &"mother_of_all_warehouses".into()).expect("Should succeed"), 2100);
+}
+
+#[test]
+fn mother_of_all_warehouses_half_of_best_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/mother_of_all_warehouses.53699.out");
+
+    assert_eq!(qual2016::score(submission, &"mother_of_all_warehouses".into()).expect("Should succeed"), 53699);
+}
+
+#[test]
+fn mother_of_all_warehouses_best_of_prezi_group() {
+    let submission = include_str!("../assets/2016qual/submissions/mother_of_all_warehouses.74464.out");
+
+    assert_eq!(qual2016::score(submission, &"mother_of_all_warehouses".into()).expect("Should succeed"), 74464);
+}
+
+#[test]
 fn should_not_fail() {
     let submission = r#"4
     6 L 0 350 2

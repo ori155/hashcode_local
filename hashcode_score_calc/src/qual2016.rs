@@ -106,27 +106,20 @@ struct Order {
 
 impl Order {
     pub fn supply(&mut self, product_id: ProductID, number_of_items: WarehouseProductInventory) -> Result<(), Qual2016ScoringError> {
-        let indices_of_product = self.products.iter().enumerate()
-            .fold(Vec::new(), |mut s, (i, pid)| {
-                if *pid == product_id {
-                    s.push(i);
-                }
-                s
-            });
 
-        if indices_of_product.len() >= number_of_items as usize {
-            for i in indices_of_product.into_iter().take(number_of_items as usize) {
-                self.products.remove(i);
-            }
-            Ok(())
-        } else {
-            Err(Qual2016ScoringError::OverSupplyingOrder {order_id: self.id})
+        // TODO: this is a shitty way... maybe use hasmap
+        for _ in 0..number_of_items {
+            let index_to_remove = self.products.iter()
+                .find_position(|pid| **pid == product_id)
+                .ok_or(Qual2016ScoringError::OverSupplyingOrder {order_id: self.id})?.0;
+            self.products.remove(index_to_remove);
         }
 
+        Ok(())
 
     }
     pub fn is_done(&self) -> bool {
-        self.products.iter().all(|x| *x == 0)
+        self.products.len() == 0
     }
 }
 
@@ -439,6 +432,8 @@ struct ExecutedCommand {
 }
 
 use std::collections::{VecDeque, HashMap};
+use itertools::Itertools;
+
 #[derive(Debug)]
 struct Drone {
     id: DroneID,
@@ -593,8 +588,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
                 }
             }
             if finished_command {
-                drone.curr_command = drone.to_execute.pop_front()
-                    .map(|c| ExecutedCommand{ command: c, command_started: t });
+                drone.curr_command = None;
             }
 
         }
@@ -657,12 +651,18 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
                 }
             }
             if finished_command {
-                drone.curr_command = drone.to_execute.pop_front()
-                    .map(|c| ExecutedCommand{ command: c, command_started: t });
+                drone.curr_command = None;
             }
 
         }
+
+        for drone in &mut drones {
+            if drone.curr_command.is_none() {
+                drone.curr_command = drone.to_execute.pop_front()
+                    .map(|c| ExecutedCommand { command: c, command_started: t });
+            }
+        }
     }
 
-   Ok(score)
+    Ok(score)
 }
