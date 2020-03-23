@@ -1,8 +1,9 @@
+use std::collections::HashMap;
+use hex_string::HexString;
 use crate::teams_db::TeamsDb;
 use crate::models::{TeamName, Team};
 use crate::{sign_on_team_name, verify_team_token};
 use crate::scoreboard::ScoreBoard;
-use std::collections::HashMap;
 use crate::models::solution::{InputFileName, ChallengeDate, SolutionSubmitRequest};
 
 pub async fn add_team(
@@ -14,7 +15,13 @@ pub async fn add_team(
     }
 
     let new_team_token = sign_on_team_name(&new_team.name);
+
+    log::info!("Team '{}' was registered with token {}", new_team.name,
+                HexString::from_bytes(&new_team_token.token).as_str());
+
     teams_db.insert(new_team).await;
+
+
 
     Ok(warp::reply::json(&new_team_token))
 }

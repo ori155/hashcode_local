@@ -358,6 +358,7 @@ dependencies = [
  "hmac",
  "http",
  "lazy_static",
+ "log 0.4.8",
  "pretty_env_logger",
  "rand 0.7.3",
  "serde",

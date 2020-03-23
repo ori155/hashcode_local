@@ -17,6 +17,7 @@ impl ScoreBoard {
     }
 
     pub async fn add_team_score(&mut self, team_name: &TeamName, file_name: &InputFileName, score: Score, challenge: ChallengeDate) {
+        log::info!("Challenge {}: Team '{}' scored {} on file {}", challenge, team_name, score, file_name);
         self.db.write().await
             .entry(challenge.clone())
             .or_default()
