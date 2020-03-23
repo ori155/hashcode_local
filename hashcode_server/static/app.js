@@ -20,6 +20,23 @@ var submission_structure_per_challenge = {
     },
 }
 
+var scoreboard_should_update = false;
+
+function start_scoreboard_refresh() {
+    scoreboard_should_update = true;
+    function inner_refresh() {
+        load_scoreboard();
+        if (scoreboard_should_update) {
+            window.setTimeout(inner_refresh, 5000);
+        }
+    }
+    inner_refresh();
+}
+
+function stop_scoreboard_refresh() {
+    scoreboard_should_update = false;
+}
+
 $(document).ready( function() {
     for (var known_challenge in submission_structure_per_challenge) {
         $("#challenge-select").append("<option value=" + known_challenge + ">" + known_challenge + "</option>");
@@ -32,7 +49,6 @@ $(document).ready( function() {
     load_scoreboard();
 });
 
-window.setInterval(load_scoreboard, 10000);
 
 function load_scoreboard() {
     var scoreboard = $("#scoreboard-table");
@@ -65,6 +81,14 @@ function load_scoreboard() {
 
 
 function show_only(pn) {
+    if (pn === 'scoreboard') {
+        load_scoreboard();
+        window.setTimeout(
+            start_scoreboard_refresh,
+            1000);
+    } else {
+        stop_scoreboard_refresh();
+    }
     $(".page[id!='" + pn + "']").hide();
     $("#" + pn).show();
 }
