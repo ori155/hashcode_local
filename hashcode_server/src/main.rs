@@ -102,7 +102,7 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use crate::teams_db::TeamsDb;
-    use crate::{Team, TeamToken};
+    use crate::{models::Team, TeamToken};
     use crate::models::solution::{Solution, ChallengeDate, SolutionSubmitRequest};
     use std::collections::HashMap;
     use crate::models::TeamName;
