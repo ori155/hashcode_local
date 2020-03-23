@@ -32,6 +32,12 @@ impl std::convert::From<HexString> for TeamToken {
     }
 }
 
+impl std::convert::From<TeamToken> for HexString {
+    fn from(token: TeamToken) -> Self {
+        HexString::from_bytes(token.token.as_slice())
+    }
+}
+
 pub struct AccessGranted {
     pub team: TeamName,
 }
@@ -75,6 +81,8 @@ async fn main() {
     use scoreboard::ScoreBoard;
 
     pretty_env_logger::init();
+
+    log::info!("Server secret key: {}", hex_string::HexString::from_bytes(&*SECRET_KEY).as_str());
 
     let private_local_server: bool = std::env::var("HASHCODE_LOCAL").is_ok();
     let hashcode_port: u16 = std::env::var("HASHCODE_PORT")
