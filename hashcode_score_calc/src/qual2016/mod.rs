@@ -475,8 +475,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
 
 
     let mut submission_score: Score = 0;
-    for t in 0..case.total_turns {
-
+    for t in 0..case.total_turns{
         let commands_to_execute_unload_first = {
             let commands_to_execute = drones.iter_mut()
                 .filter_map(|d| d.get_command_to_execute(t));
@@ -509,7 +508,10 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
                         .deliver(order_id, product_id, number_of_items)?;
 
                     if earth.get_order(order_id)?.is_done() {
-                        submission_score += ((((case.total_turns - t) as f64) / (case.total_turns as f64)) * 100f64).ceil() as Score;
+                        let added_score = ((case.total_turns as Score - t as Score) * 100) / case.total_turns as Score;
+                        let should_round_up = (((case.total_turns as Score - t as Score) * 100) % case.total_turns as Score) != 0;
+
+                        submission_score += added_score + if should_round_up {1} else {0};
                     }
                 },
                 Command::Wait { turns, ..} => {
@@ -519,6 +521,5 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         }
 
     }
-
     Ok(submission_score)
 }
