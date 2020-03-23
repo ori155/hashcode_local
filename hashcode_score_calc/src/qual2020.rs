@@ -46,7 +46,7 @@ type BookID = u32;
 type BookScore = u16;
 
 struct Library {
-    id: LibraryID,
+    _id: LibraryID,
     books: Vec<BookID>,
     max_books_per_day: u32,
     days_to_signup: u32
@@ -91,7 +91,7 @@ struct Submission {
 }
 
 struct Case {
-    number_of_different_books: u32,
+    _number_of_different_books: u32,
     libraries: Vec<Library>,
     number_of_days: u32,
     score_per_book: Vec<BookScore>
@@ -152,11 +152,11 @@ impl Case {
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|_| ExpectedANumber)?;
 
-            libraries.push(Library{ id: library_id, days_to_signup, max_books_per_day, books: books_in_library })
+            libraries.push(Library{ _id: library_id, days_to_signup, max_books_per_day, books: books_in_library })
 
         }
 
-        Ok(Case { number_of_different_books, libraries, number_of_days, score_per_book })
+        Ok(Case { _number_of_different_books: number_of_different_books, libraries, number_of_days, score_per_book })
 
     }
 }

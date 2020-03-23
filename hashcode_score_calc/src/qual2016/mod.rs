@@ -480,7 +480,7 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         let drone_id = command.get_drone_id();
         let drone: &mut Drone = drones.get_mut(drone_id as usize)
             .ok_or(Qual2016ScoringError::CommandIssuedToUnknownDrone {drone_id})?;
-        drone.register_command(command, &earth);
+        drone.register_command(command, &earth)?;
     }
 
 
