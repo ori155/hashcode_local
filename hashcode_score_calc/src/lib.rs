@@ -4,8 +4,7 @@ pub mod qual2020;
 pub mod qual2016;
 
 use thiserror::Error;
-use std::fmt::Display;
-use core::fmt::Debug;
+use std::fmt::{self, Debug, Display};
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Error, Debug)]
@@ -48,13 +47,21 @@ pub enum ChallengeDate {
     Final(Year),
 }
 
+impl Display for ChallengeDate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            ChallengeDate::Qualification(y) => write!(f, "qualification {}", y),
+            ChallengeDate::Final(y) => write!(f, "final {}", y)
+        }
+    }
+}
+
 pub struct Challenge {
     pub input_file_names: Vec<InputFileName>,
     pub score_function: Box<dyn Fn(&str, &InputFileName) -> Result<Score, ScoringError> + 'static + Send + Sync>,
     pub date: ChallengeDate,
 }
 
-use std::fmt;
 impl fmt::Debug for Challenge {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "date: {:?}, input_file_names: {:?}", self.date, self.input_file_names)
