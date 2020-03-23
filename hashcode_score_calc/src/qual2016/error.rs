@@ -27,6 +27,8 @@ pub enum Qual2016ScoringError {
     DroneNotInWarehouse { drone_id: DroneID, warehouse_id: WarehouseID },
     #[error("Internal Error: drone {drone_id} didn't fly to order {order_id}")]
     DroneNotInOrderLocation{ drone_id: DroneID, order_id: OrderID },
+    #[error("Loud, Deliver and Unload should have a positive number of items, drone {drone_id}")]
+    CommandWithAmountZero {drone_id: DroneID},
 }
 
 

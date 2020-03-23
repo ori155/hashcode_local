@@ -463,6 +463,16 @@ pub fn score(submission: &str, case: &InputFileName) -> Result<Score, ScoringErr
         .map(|(_submission, commands)| commands)
         .map_err(|e| ScoringError::SubmissionFileError(Box::new(e.to_owned())))?;
 
+    // The right place to check that would be the constructor or the parser, but...
+    for command in &commands {
+        let drone_id = command.get_drone_id();
+        match command {
+            Command::Load { number_of_items, .. } => { if *number_of_items == 0 {return Err(Qual2016ScoringError::CommandWithAmountZero{drone_id}.into())}},
+            Command::Unload { number_of_items,.. } => { if *number_of_items == 0 {return Err(Qual2016ScoringError::CommandWithAmountZero{drone_id}.into())}},
+            Command::Deliver { number_of_items,.. } => { if *number_of_items == 0 {return Err(Qual2016ScoringError::CommandWithAmountZero{drone_id}.into())}},
+            _ => {}
+        }
+    }
 
     let mut earth = case.get_earth_bound();
 
