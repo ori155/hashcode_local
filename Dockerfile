@@ -16,4 +16,5 @@ RUN apt-get update && apt-get install -y libssl1.1
 COPY --from=builder /usr/src/myapp/target/release/hashcode_server /usr/local/bin/myapp
 COPY --from=builder /usr/src/myapp/hashcode_server/static /usr/local/bin/static
 WORKDIR /usr/local/bin
+ENV RUST_LOG=info
 CMD ["myapp"]
