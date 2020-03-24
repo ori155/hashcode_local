@@ -49,6 +49,16 @@ $(document).ready( function() {
     load_scoreboard();
 });
 
+function add_table_row(table, values) {
+    var tr = document.createElement("tr");
+    for (var val of values) {
+        var td = document.createElement("td");
+        var text_node = document.createTextNode(val);
+        td.appendChild(text_node);
+        tr.appendChild(td);
+    }
+    table.appendChild(tr);
+}
 
 function load_scoreboard() {
     var scoreboard = $("#scoreboard-table");
@@ -70,7 +80,7 @@ function load_scoreboard() {
             scoreboard.append("<thead><tr><th>#</th><th>Team Name</th><th>Total Score</th></tr><thead>");
             for (var i=0; i<scores.length; i++) {
                 var team_score = scores[i];
-                scoreboard.append("<tr><td>" + (i+1) + "</td><td>" + team_score.name + "</td><td>" + team_score.score + "</td></tr>");
+                add_table_row(scoreboard[0], [(i+1), team_score.name, team_score.score]);
             }
         },
         error:function(res){
@@ -188,7 +198,7 @@ function submit_files() {
                                 + currentdate.getSeconds();
 
                 for (var in_file_name in res) {
-                    last_submissions_table.append("<tr><td>" + datetime +"</td><td>" + in_file_name + "</td><td>" + res[in_file_name] + "</td></tr>");
+                    add_table_row(last_submissions_table[0], [datetime, in_file_name, res[in_file_name]])
                 }
             },
             error:function(jqxhr, status){
