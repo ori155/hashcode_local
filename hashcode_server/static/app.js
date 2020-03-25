@@ -20,6 +20,8 @@ var submission_structure_per_challenge = {
     },
 }
 
+var default_challenge = "qualification-2016";
+
 var scoreboard_should_update = false;
 
 function start_scoreboard_refresh() {
@@ -41,6 +43,8 @@ $(document).ready( function() {
     for (var known_challenge in submission_structure_per_challenge) {
         $("#challenge-select").append("<option value=" + known_challenge + ">" + known_challenge + "</option>");
     };
+
+    $("#challenge-select").val(default_challenge);
 
     change_challenge();
     $("#challenge-select").change(change_challenge);
